@@ -1,0 +1,39 @@
+export type Category = "Deep Work" | "Meeting" | "Admin" | "Personal";
+export type Priority = "Low" | "Medium" | "High";
+export type PomodoroPhase = "focus" | "break";
+
+export interface Task {
+  id: string;
+  title: string;
+  startMinute: number;
+  endMinute: number;
+  category: Category;
+  priority: Priority;
+  memo: string;
+  completed: boolean;
+}
+
+export interface WorkLog {
+  id: string;
+  taskId: string | null;
+  taskTitle: string;
+  minutes: number;
+  phase: PomodoroPhase;
+  completedAt: string;
+}
+
+export interface PomodoroState {
+  mode: PomodoroPhase;
+  isRunning: boolean;
+  remainingSeconds: number;
+  selectedTaskId: string | null;
+  completedCount: number;
+}
+
+export interface DashboardStats {
+  focusMinutes: number;
+  completedTasks: number;
+  activeTasks: number;
+  freeMinutes: number;
+  pomodoroCount: number;
+}
