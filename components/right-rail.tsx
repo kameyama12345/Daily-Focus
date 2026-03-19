@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 
 import { CalendarDays, CheckCheck, Clock3, Coffee, TimerReset } from "lucide-react";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { formatDuration, formatMinute, formatSeconds } from "@/lib/time";
-import { DashboardStats, PomodoroState, Task, WorkLog } from "@/lib/types";
+import { DashboardStats, PomodoroState, PomodoroStatus, Task, WorkLog } from "@/lib/types";
 
 export function RightRail({
   tasks,
@@ -18,6 +18,8 @@ export function RightRail({
   onPomodoroTaskChange,
   onStartPause,
   onReset,
+  focusState,
+  isFocusMode,
 }: {
   tasks: Task[];
   logs: WorkLog[];
@@ -30,180 +32,213 @@ export function RightRail({
   onPomodoroTaskChange: (taskId: string | null) => void;
   onStartPause: () => void;
   onReset: () => void;
+  focusState: PomodoroStatus;
+  isFocusMode: boolean;
 }) {
   const linkedPomodoroTask = tasks.find((task) => task.id === pomodoro.selectedTaskId);
+  const isLocked = focusState === "running" || focusState === "paused" || focusState === "break";
+  const statusText: Record<PomodoroStatus, string> = {
+    idle: "開始待ち",
+    running: "集中中",
+    paused: "一時停止",
+    break: "休憩中",
+    completed: "完了",
+  };
 
   return (
-    <aside className="space-y-4">
-      <section className="surface rounded-[24px] p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-[11px] uppercase tracking-[0.24em] text-muted">Pomodoro</div>
-            <div className="mt-3 text-5xl font-semibold tracking-tight">
-              {formatSeconds(pomodoro.remainingSeconds)}
-            </div>
-          </div>
-          <div
-            className="rounded-full px-3 py-1 text-[11px] font-medium"
-            style={{
-              background: pomodoro.mode === "focus" ? "var(--accent-soft)" : "rgba(16, 185, 129, 0.12)",
-              color: pomodoro.mode === "focus" ? "var(--accent)" : "var(--success)",
-            }}
-          >
-            {pomodoro.mode === "focus" ? "Focus 25m" : "Break 5m"}
-          </div>
-        </div>
-
-        <div className="mt-5 rounded-[20px] px-4 py-4" style={{ background: "var(--bg-muted)" }}>
-          <div className="text-[11px] uppercase tracking-[0.2em] text-muted">Linked Task</div>
-          <select
-            className="mt-3 w-full rounded-[16px] border-0 px-3 py-3 text-sm outline-none"
-            onChange={(event) => onPomodoroTaskChange(event.target.value || null)}
-            style={{ background: "var(--panel-strong)" }}
-            value={pomodoro.selectedTaskId ?? ""}
-          >
-            <option value="">未選択</option>
-            {tasks.map((task) => (
-              <option key={task.id} value={task.id}>
-                {task.title}
-              </option>
-            ))}
-          </select>
-          {linkedPomodoroTask ? (
-            <div className="mt-3 text-sm">
-              <div className="font-medium">{linkedPomodoroTask.title}</div>
-              <div className="mt-1 text-muted">
-                {formatMinute(linkedPomodoroTask.startMinute)} - {formatMinute(linkedPomodoroTask.endMinute)}
+    <aside className="soft-scrollbar h-full overflow-y-auto pr-1">
+      <div className="space-y-4 pb-4">
+        <section
+          className="surface rounded-[24px] p-6 transition duration-300"
+          style={{
+            boxShadow: isFocusMode ? "0 24px 80px rgba(0,0,0,0.28)" : "var(--shadow-panel)",
+            borderColor: isFocusMode ? "var(--line-strong)" : "var(--line)",
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.24em] text-muted">Pomodoro</div>
+              <div className="mt-3 text-5xl font-semibold tracking-tight">
+                {formatSeconds(pomodoro.remainingSeconds)}
               </div>
+              <div className="mt-2 text-sm text-muted">{statusText[focusState]}</div>
             </div>
-          ) : null}
-        </div>
-
-        <div className="mt-5 flex gap-2">
-          <button
-            className="flex-1 rounded-full px-4 py-3 text-sm font-medium text-white transition"
-            onClick={onStartPause}
-            style={{ background: "var(--text)" }}
-            type="button"
-          >
-            {pomodoro.isRunning ? "Pause" : "Start"}
-          </button>
-          <button
-            className="rounded-full px-4 py-3 text-sm transition"
-            onClick={onReset}
-            style={{ background: "var(--bg-muted)" }}
-            type="button"
-          >
-            <TimerReset className="h-4 w-4" />
-          </button>
-        </div>
-      </section>
-
-      <section className="surface rounded-[24px] p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-[11px] uppercase tracking-[0.24em] text-muted">Task Detail</div>
-            <h3 className="mt-2 text-xl font-semibold tracking-tight">
-              {selectedTask?.title ?? "選択中のタスクはありません"}
-            </h3>
+            <div
+              className="rounded-full px-3 py-1 text-[11px] font-medium"
+              style={{
+                background: pomodoro.mode === "focus" ? "var(--accent-soft)" : "rgba(16, 185, 129, 0.12)",
+                color: pomodoro.mode === "focus" ? "var(--accent)" : "var(--success)",
+              }}
+            >
+              {pomodoro.mode === "focus" ? "Focus 25m" : "Break 5m"}
+            </div>
           </div>
-          {selectedTask ? (
+
+          <div className="mt-5 rounded-[20px] px-4 py-4" style={{ background: "var(--bg-muted)" }}>
+            <div className="text-[11px] uppercase tracking-[0.2em] text-muted">Linked Task</div>
+            <select
+              className="mt-3 w-full rounded-[16px] border-0 px-3 py-3 text-sm outline-none"
+              disabled={isLocked}
+              onChange={(event) => onPomodoroTaskChange(event.target.value || null)}
+              style={{ background: "var(--panel-strong)" }}
+              value={pomodoro.selectedTaskId ?? ""}
+            >
+              <option value="">未選択</option>
+              {tasks.map((task) => (
+                <option key={task.id} value={task.id}>
+                  {task.title}
+                </option>
+              ))}
+            </select>
+            {linkedPomodoroTask ? (
+              <div className="mt-3 text-sm">
+                <div className="font-medium">{linkedPomodoroTask.title}</div>
+                <div className="mt-1 text-muted">
+                  {formatMinute(linkedPomodoroTask.startMinute)} - {formatMinute(linkedPomodoroTask.endMinute)}
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mt-5 flex gap-2">
             <button
-              className="rounded-full px-3 py-2 text-sm transition"
-              onClick={() => onEditTask(selectedTask)}
+              className="flex-1 rounded-full px-4 py-3 text-sm font-medium text-white transition"
+              onClick={onStartPause}
+              style={{ background: "var(--text)" }}
+              type="button"
+            >
+              {pomodoro.isRunning ? "Pause" : focusState === "completed" ? "Restart" : "Start"}
+            </button>
+            <button
+              aria-label="Reset pomodoro"
+              className="rounded-full px-4 py-3 text-sm transition"
+              onClick={onReset}
               style={{ background: "var(--bg-muted)" }}
               type="button"
             >
-              編集
+              <TimerReset className="h-4 w-4" />
             </button>
-          ) : null}
-        </div>
+          </div>
+        </section>
 
-        {selectedTask ? (
-          <div className="mt-5 space-y-4">
-            <div className="flex items-center gap-2 text-sm text-muted">
-              <Clock3 className="h-4 w-4" />
-              {formatMinute(selectedTask.startMinute)} - {formatMinute(selectedTask.endMinute)}
+        <section
+          className="surface rounded-[24px] p-6 transition duration-300"
+          style={{
+            opacity: isFocusMode ? (focusState === "running" ? 0.48 : 0.66) : 1,
+            filter: isFocusMode ? "saturate(0.82)" : "none",
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.24em] text-muted">Task Detail</div>
+              <h3 className="mt-2 text-xl font-semibold tracking-tight">
+                {selectedTask?.title ?? "選択中のタスクはありません"}
+              </h3>
             </div>
-
-            <div className="flex items-center gap-2">
-              <span
-                className="rounded-full px-2.5 py-1 text-[11px] font-medium"
-                style={{
-                  background: "var(--accent-soft)",
-                  color: "var(--accent)",
-                }}
-              >
-                {selectedTask.category}
-              </span>
-              <span className="text-xs text-muted">Priority {selectedTask.priority}</span>
-            </div>
-
-            <p className="text-sm leading-6 text-muted">
-              {selectedTask.memo || "メモはまだありません。"}
-            </p>
-
-            <div className="flex gap-2 pt-1">
+            {selectedTask ? (
               <button
-                className="flex-1 rounded-full px-4 py-3 text-sm font-medium text-white transition"
-                onClick={() => onToggleTaskCompletion(selectedTask.id)}
-                style={{ background: "var(--text)" }}
+                className="rounded-full px-3 py-2 text-sm transition"
+                disabled={isLocked}
+                onClick={() => onEditTask(selectedTask)}
+                style={{ background: "var(--bg-muted)" }}
                 type="button"
               >
-                {selectedTask.completed ? "未完了に戻す" : "完了にする"}
+                編集
               </button>
-              <button
-                className="rounded-full px-4 py-3 text-sm transition"
-                onClick={() => onRemoveTask(selectedTask.id)}
-                style={{ background: "var(--bg-muted)", color: "var(--danger)" }}
-                type="button"
-              >
-                削除
-              </button>
-            </div>
+            ) : null}
           </div>
-        ) : (
-          <p className="mt-4 text-sm leading-6 text-muted">
-            詳細は常時出さず、必要なときだけここに展開します。
-          </p>
-        )}
-      </section>
 
-      <section className="surface rounded-[24px] p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-[11px] uppercase tracking-[0.24em] text-muted">Daily Log</div>
-            <div className="mt-2 text-lg font-semibold">実行実績</div>
-          </div>
-          <CalendarDays className="h-4 w-4 text-muted" />
-        </div>
-        <div className="mt-4 space-y-3">
-          {logs.slice(0, 4).map((log) => (
-            <div key={log.id} className="rounded-[18px] px-4 py-3" style={{ background: "var(--bg-muted)" }}>
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-sm font-medium">{log.taskTitle}</div>
-                  <div className="mt-1 text-xs text-muted">
-                    {format(new Date(log.completedAt), "HH:mm", { locale: ja })}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-semibold">{log.minutes}m</div>
-                  <div className="mt-1 text-xs text-muted">{log.phase === "focus" ? "集中" : "休憩"}</div>
-                </div>
+          {selectedTask ? (
+            <div className="mt-5 space-y-4">
+              <div className="flex items-center gap-2 text-sm text-muted">
+                <Clock3 className="h-4 w-4" />
+                {formatMinute(selectedTask.startMinute)} - {formatMinute(selectedTask.endMinute)}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span
+                  className="rounded-full px-2.5 py-1 text-[11px] font-medium"
+                  style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
+                >
+                  {selectedTask.category}
+                </span>
+                <span className="text-xs text-muted">Priority {selectedTask.priority}</span>
+              </div>
+
+              <p className="text-sm leading-6 text-muted">
+                {selectedTask.memo || "メモはまだありません。"}
+              </p>
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  className="flex-1 rounded-full px-4 py-3 text-sm font-medium text-white transition"
+                  disabled={isLocked}
+                  onClick={() => onToggleTaskCompletion(selectedTask.id)}
+                  style={{ background: "var(--text)" }}
+                  type="button"
+                >
+                  {selectedTask.completed ? "未完了に戻す" : "完了にする"}
+                </button>
+                <button
+                  className="rounded-full px-4 py-3 text-sm transition"
+                  disabled={isLocked}
+                  onClick={() => onRemoveTask(selectedTask.id)}
+                  style={{ background: "var(--bg-muted)", color: "var(--danger)" }}
+                  type="button"
+                >
+                  削除
+                </button>
               </div>
             </div>
-          ))}
-        </div>
-      </section>
+          ) : (
+            <p className="mt-4 text-sm leading-6 text-muted">
+              詳細は常時出さず、必要なときだけここに展開します。
+            </p>
+          )}
+        </section>
 
-      <section className="surface rounded-[24px] p-5">
-        <div className="grid grid-cols-3 gap-3 text-center">
-          <MiniStat icon={<CheckCheck className="h-4 w-4" />} label="Done" value={`${dashboard.completedTasks}`} />
-          <MiniStat icon={<Coffee className="h-4 w-4" />} label="Focus" value={`${dashboard.pomodoroCount}`} />
-          <MiniStat icon={<Clock3 className="h-4 w-4" />} label="Space" value={formatDuration(dashboard.freeMinutes)} />
-        </div>
-      </section>
+        <section
+          className="surface rounded-[24px] p-6 transition duration-300"
+          style={{ opacity: isFocusMode ? 0.45 : 1 }}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.24em] text-muted">Daily Log</div>
+              <div className="mt-2 text-lg font-semibold">実行実績</div>
+            </div>
+            <CalendarDays className="h-4 w-4 text-muted" />
+          </div>
+          <div className="mt-4 space-y-3">
+            {logs.slice(0, 4).map((log) => (
+              <div key={log.id} className="rounded-[18px] px-4 py-3" style={{ background: "var(--bg-muted)" }}>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-medium">{log.taskTitle}</div>
+                    <div className="mt-1 text-xs text-muted">
+                      {format(new Date(log.completedAt), "HH:mm", { locale: ja })}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-semibold">{log.minutes}m</div>
+                    <div className="mt-1 text-xs text-muted">{log.phase === "focus" ? "集中" : "休憩"}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section
+          className="surface rounded-[24px] p-5 transition duration-300"
+          style={{ opacity: isFocusMode ? 0.38 : 1 }}
+        >
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <MiniStat icon={<CheckCheck className="h-4 w-4" />} label="Done" value={`${dashboard.completedTasks}`} />
+            <MiniStat icon={<Coffee className="h-4 w-4" />} label="Focus" value={`${dashboard.pomodoroCount}`} />
+            <MiniStat icon={<Clock3 className="h-4 w-4" />} label="Space" value={formatDuration(dashboard.freeMinutes)} />
+          </div>
+        </section>
+      </div>
     </aside>
   );
 }

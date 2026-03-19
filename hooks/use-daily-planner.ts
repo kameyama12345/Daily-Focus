@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { BREAK_SECONDS, FOCUS_SECONDS, MINUTES_IN_DAY } from "@/lib/constants";
 import { initialPomodoro, sampleLogs, sampleTasks } from "@/lib/sample-data";
 import { clamp, snapMinute } from "@/lib/time";
-import { DashboardStats, PomodoroState, Task, WorkLog } from "@/lib/types";
+import { DashboardStats, PomodoroState, PomodoroStatus, Task, WorkLog } from "@/lib/types";
 
 const STORAGE_KEY = "daily-focus-state";
 const DEFAULT_DURATION = 60;
@@ -53,10 +53,36 @@ function loadInitialState(): PlannerState {
   }
 
   try {
-    return JSON.parse(raw) as PlannerState;
+    const parsed = JSON.parse(raw) as PlannerState;
+    return {
+      ...parsed,
+      pomodoro: {
+        ...parsed.pomodoro,
+        status: parsed.pomodoro.status ?? getPomodoroStatus(parsed.pomodoro),
+        completedAt: parsed.pomodoro.completedAt ?? null,
+      },
+    };
   } catch {
     return { tasks: sampleTasks, logs: sampleLogs, pomodoro: initialPomodoro };
   }
+}
+
+function getPomodoroStatus(
+  partial: Pick<PomodoroState, "mode" | "isRunning" | "remainingSeconds" | "completedAt">,
+): PomodoroStatus {
+  if (partial.isRunning) {
+    return partial.mode === "break" ? "break" : "running";
+  }
+  if (partial.completedAt) {
+    return "completed";
+  }
+  if (partial.mode === "break" && partial.remainingSeconds < BREAK_SECONDS) {
+    return "paused";
+  }
+  if (partial.mode === "focus" && partial.remainingSeconds < FOCUS_SECONDS) {
+    return "paused";
+  }
+  return "idle";
 }
 
 export function useDailyPlanner() {
@@ -86,7 +112,11 @@ export function useDailyPlanner() {
         if (nextSeconds > 0) {
           return {
             ...current,
-            pomodoro: { ...current.pomodoro, remainingSeconds: nextSeconds },
+            pomodoro: {
+              ...current.pomodoro,
+              remainingSeconds: nextSeconds,
+              status: current.pomodoro.mode === "break" ? "break" : "running",
+            },
           };
         }
 
@@ -118,6 +148,8 @@ export function useDailyPlanner() {
               ? current.pomodoro.completedCount + 1
               : current.pomodoro.completedCount,
             remainingSeconds: isFocusComplete ? BREAK_SECONDS : FOCUS_SECONDS,
+            completedAt: isFocusComplete ? new Date().toISOString() : null,
+            status: isFocusComplete ? "completed" : "idle",
           },
         };
       });
@@ -259,14 +291,28 @@ export function useDailyPlanner() {
   function startPomodoro() {
     setState((current) => ({
       ...current,
-      pomodoro: { ...current.pomodoro, isRunning: true },
+      pomodoro: {
+        ...current.pomodoro,
+        isRunning: true,
+        completedAt: null,
+        status: current.pomodoro.mode === "break" ? "break" : "running",
+      },
     }));
   }
 
   function pausePomodoro() {
     setState((current) => ({
       ...current,
-      pomodoro: { ...current.pomodoro, isRunning: false },
+      pomodoro: {
+        ...current.pomodoro,
+        isRunning: false,
+        status: getPomodoroStatus({
+          mode: current.pomodoro.mode,
+          isRunning: false,
+          remainingSeconds: current.pomodoro.remainingSeconds,
+          completedAt: null,
+        }),
+      },
     }));
   }
 
@@ -278,6 +324,8 @@ export function useDailyPlanner() {
         isRunning: false,
         mode: "focus",
         remainingSeconds: FOCUS_SECONDS,
+        status: "idle",
+        completedAt: null,
       },
     }));
   }

@@ -1,6 +1,7 @@
 export type Category = "Deep Work" | "Meeting" | "Admin" | "Personal";
 export type Priority = "Low" | "Medium" | "High";
 export type PomodoroPhase = "focus" | "break";
+export type PomodoroStatus = "idle" | "running" | "paused" | "break" | "completed";
 
 export interface Task {
   id: string;
@@ -28,6 +29,8 @@ export interface PomodoroState {
   remainingSeconds: number;
   selectedTaskId: string | null;
   completedCount: number;
+  status: PomodoroStatus;
+  completedAt: string | null;
 }
 
 export interface DashboardStats {

@@ -79,4 +79,6 @@ export const initialPomodoro: PomodoroState = {
   remainingSeconds: FOCUS_SECONDS,
   selectedTaskId: "task-5",
   completedCount: 2,
+  status: "idle",
+  completedAt: null,
 };
