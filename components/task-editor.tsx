@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { CATEGORY_OPTIONS, PRIORITY_OPTIONS } from "@/lib/constants";
@@ -21,7 +21,7 @@ export function TaskEditor({
   onSave,
 }: {
   open: boolean;
-  suggestedTask: Task | null;
+  suggestedTask: Partial<Task> | null;
   onClose: () => void;
   onSave: (task: Partial<Task> & Pick<Task, "title">) => void;
 }) {
@@ -48,7 +48,10 @@ export function TaskEditor({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md" style={{ background: "rgba(6, 10, 17, 0.32)" }}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md"
+      style={{ background: "rgba(6, 10, 17, 0.32)" }}
+    >
       <div
         className="w-full max-w-2xl rounded-[28px] p-6 shadow-float"
         style={{ background: "var(--panel-strong)", border: "1px solid var(--line)" }}
@@ -57,7 +60,7 @@ export function TaskEditor({
           <div>
             <p className="text-xs uppercase tracking-[0.24em] text-muted">Task Editor</p>
             <h3 className="mt-2 text-2xl font-semibold tracking-tight">
-              {suggestedTask ? "タスクを編集" : "タスクを追加"}
+              {suggestedTask?.id ? "タスクを編集" : "タスクを追加"}
             </h3>
           </div>
           <button
@@ -76,14 +79,14 @@ export function TaskEditor({
             <input
               className="w-full rounded-[18px] border-0 px-4 py-3 outline-none transition"
               onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-              placeholder="例: Investor update prep"
+              placeholder="例: 企画書ドラフト"
               style={{ background: "var(--bg-muted)" }}
               value={form.title}
             />
           </label>
 
           <label>
-            <span className="mb-2 block text-sm font-medium text-muted-strong">開始時刻</span>
+            <span className="mb-2 block text-sm font-medium text-muted-strong">開始</span>
             <input
               className="w-full rounded-[18px] border-0 px-4 py-3 outline-none transition"
               onChange={(event) =>
@@ -96,7 +99,7 @@ export function TaskEditor({
           </label>
 
           <label>
-            <span className="mb-2 block text-sm font-medium text-muted-strong">終了時刻</span>
+            <span className="mb-2 block text-sm font-medium text-muted-strong">終了</span>
             <input
               className="w-full rounded-[18px] border-0 px-4 py-3 outline-none transition"
               onChange={(event) =>
@@ -155,7 +158,7 @@ export function TaskEditor({
             <textarea
               className="min-h-28 w-full rounded-[18px] border-0 px-4 py-3 outline-none transition"
               onChange={(event) => setForm((current) => ({ ...current, memo: event.target.value }))}
-              placeholder="背景、意図、準備物など"
+              placeholder="狙い・完了条件・メモなど"
               style={{ background: "var(--bg-muted)" }}
               value={form.memo}
             />
@@ -171,7 +174,7 @@ export function TaskEditor({
               }
               type="checkbox"
             />
-            完了済みにする
+            完了にする
           </label>
           <div className="flex gap-2">
             <button

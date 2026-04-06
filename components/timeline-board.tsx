@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { GripVertical } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Clock3, GripVertical, Pencil } from "lucide-react";
 import {
   CATEGORY_STYLES,
   END_HOUR,
@@ -45,6 +45,7 @@ export function TimelineBoard({
   selectedTaskId,
   onSelectTask,
   onEditTask,
+  onCreateTask,
   onUpdateTask,
   disabled,
   focusState,
@@ -53,6 +54,7 @@ export function TimelineBoard({
   selectedTaskId: string | null;
   onSelectTask: (taskId: string | null) => void;
   onEditTask: (task: Task) => void;
+  onCreateTask: (startMinute: number, endMinute: number) => void;
   onUpdateTask: (taskId: string, startMinute: number, endMinute: number) => void;
   disabled: boolean;
   focusState: "idle" | "running" | "paused" | "break" | "completed";
@@ -67,9 +69,37 @@ export function TimelineBoard({
 
   const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, index) => START_HOUR + index);
   const freeBlocks = useMemo(() => buildFreeBlocks(tasks), [tasks]);
-  const now = new Date();
-  const currentMinute = now.getHours() * 60 + now.getMinutes();
+  const [currentMinute, setCurrentMinute] = useState(() => {
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes();
+  });
   const currentOffset = minuteToOffset(currentMinute);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const didAutoScrollRef = useRef(false);
+
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      setCurrentMinute(now.getHours() * 60 + now.getMinutes());
+    };
+    update();
+    const interval = window.setInterval(update, 60_000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (didAutoScrollRef.current) return;
+    if (!scrollRef.current) return;
+    if (currentMinute < START_HOUR * 60 || currentMinute > END_HOUR * 60) return;
+    scrollRef.current.scrollTop = Math.max(currentOffset - 220, 0);
+    didAutoScrollRef.current = true;
+  }, [currentMinute, currentOffset]);
+
+  function scrollToNow() {
+    if (!scrollRef.current) return;
+    if (currentMinute < START_HOUR * 60 || currentMinute > END_HOUR * 60) return;
+    scrollRef.current.scrollTo({ top: Math.max(currentOffset - 220, 0), behavior: "smooth" });
+  }
 
   function commitDrag(event: React.PointerEvent<HTMLDivElement>) {
     if (!dragState || disabled) return;
@@ -105,13 +135,26 @@ export function TimelineBoard({
       onPointerUp={() => setDragState(null)}
       onPointerLeave={() => setDragState(null)}
     >
-      <div className="sticky top-0 z-20 flex px-6 py-4 backdrop-blur-md" style={{ background: "var(--panel-soft)" }}>
+      <div
+        className="sticky top-0 z-20 flex items-center gap-3 px-6 py-4 backdrop-blur-md"
+        style={{ background: "var(--panel-soft)" }}
+      >
         <div className="w-16 text-[11px] uppercase tracking-[0.24em] text-muted">Time</div>
         <div className="flex-1 text-[11px] uppercase tracking-[0.24em] text-muted">Schedule</div>
+        <button
+          className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs transition"
+          onClick={scrollToNow}
+          style={{ background: "var(--bg-muted)", color: "var(--muted-strong)" }}
+          type="button"
+        >
+          <Clock3 className="h-3.5 w-3.5" />
+          Now
+        </button>
       </div>
 
       <div
         className="soft-scrollbar relative min-h-0 flex-1 overflow-y-auto transition duration-300"
+        ref={scrollRef}
         style={{
           opacity: focusState === "running" ? 0.72 : focusState === "paused" ? 0.82 : 1,
           filter:
@@ -124,23 +167,27 @@ export function TimelineBoard({
       >
         <div className="relative" style={{ height: `${(END_HOUR - START_HOUR) * HOUR_HEIGHT}px` }}>
           {freeBlocks.map((block) => (
-            <div
+            <button
               key={`${block.startMinute}-${block.endMinute}`}
-              className="absolute left-20 right-6 rounded-[20px]"
+              className="absolute left-20 right-6 rounded-[20px] text-left transition"
+              disabled={disabled}
+              onClick={() => onCreateTask(block.startMinute, Math.min(block.startMinute + 60, block.endMinute))}
               style={{
                 top: minuteToOffset(block.startMinute),
                 height: minuteToOffset(block.endMinute) - minuteToOffset(block.startMinute),
                 background: "var(--accent-soft)",
                 border: "1px dashed var(--line)",
+                opacity: disabled ? 0.5 : 1,
               }}
+              type="button"
             >
               <div
                 className="absolute right-4 top-3 rounded-full px-2.5 py-1 text-[10px] font-medium"
                 style={{ background: "var(--panel-strong)", color: "var(--accent)" }}
               >
-                Focus window
+                空き枠（クリックで作成）
               </div>
-            </div>
+            </button>
           ))}
 
           {hours.slice(0, -1).map((hour) => (
@@ -185,13 +232,20 @@ export function TimelineBoard({
               <button
                 key={task.id}
                 className={cn(
-                  "absolute left-24 right-6 rounded-[20px] p-4 text-left transition duration-200",
+                  "group absolute left-24 right-6 rounded-[20px] p-4 text-left transition duration-200",
                   dragState?.taskId === task.id && "scale-[1.01]",
                   disabled && "cursor-default",
                 )}
                 onClick={() => onSelectTask(task.id)}
                 onDoubleClick={() => {
                   if (!disabled) onEditTask(task);
+                }}
+                onKeyDown={(event) => {
+                  if (disabled) return;
+                  if (event.key.toLowerCase() === "e") {
+                    event.preventDefault();
+                    onEditTask(task);
+                  }
                 }}
                 style={{
                   top,
@@ -213,26 +267,47 @@ export function TimelineBoard({
                     </p>
                   </div>
 
-                  <button
-                    className="cursor-grab rounded-full p-2 active:cursor-grabbing"
-                    disabled={disabled}
-                    onPointerDown={(event) => {
-                      if (disabled) return;
-                      event.stopPropagation();
-                      onSelectTask(task.id);
-                      setDragState({
-                        taskId: task.id,
-                        mode: "move",
-                        originY: event.clientY,
-                        startMinute: task.startMinute,
-                        endMinute: task.endMinute,
-                      });
-                    }}
-                    style={{ background: "var(--bg-muted)", color: "var(--muted)" }}
-                    type="button"
-                  >
-                    <GripVertical className="h-4 w-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      aria-label="Edit task"
+                      className={cn(
+                        "rounded-full p-2 transition",
+                        disabled && "pointer-events-none",
+                        "opacity-0 group-hover:opacity-100",
+                      )}
+                      onClick={(event) => {
+                        if (disabled) return;
+                        event.stopPropagation();
+                        onEditTask(task);
+                      }}
+                      style={{ background: "var(--bg-muted)", color: "var(--muted)" }}
+                      type="button"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+
+                    <button
+                      aria-label="Move task"
+                      className="cursor-grab rounded-full p-2 active:cursor-grabbing"
+                      disabled={disabled}
+                      onPointerDown={(event) => {
+                        if (disabled) return;
+                        event.stopPropagation();
+                        onSelectTask(task.id);
+                        setDragState({
+                          taskId: task.id,
+                          mode: "move",
+                          originY: event.clientY,
+                          startMinute: task.startMinute,
+                          endMinute: task.endMinute,
+                        });
+                      }}
+                      style={{ background: "var(--bg-muted)", color: "var(--muted)" }}
+                      type="button"
+                    >
+                      <GripVertical className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mt-3 flex items-center gap-2">
@@ -264,9 +339,9 @@ export function TimelineBoard({
                       originY: event.clientY,
                       startMinute: task.startMinute,
                       endMinute: task.endMinute,
-                      });
-                    }}
-                    style={{ background: "var(--line-strong)" }}
+                    });
+                  }}
+                  style={{ background: "var(--line-strong)" }}
                   type="button"
                 />
               </button>

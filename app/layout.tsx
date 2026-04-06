@@ -11,6 +11,17 @@ const notoSansJp = Noto_Sans_JP({
   subsets: ["latin"],
   variable: "--font-noto-sans-jp",
   weight: ["400", "500", "700"],
+  display: "swap",
+  fallback: [
+    "ui-sans-serif",
+    "system-ui",
+    "-apple-system",
+    "Segoe UI",
+    "Hiragino Sans",
+    "Yu Gothic",
+    "Meiryo",
+    "sans-serif",
+  ],
 });
 
 export const metadata: Metadata = {

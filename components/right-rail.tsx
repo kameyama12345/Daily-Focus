@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { CalendarDays, CheckCheck, Clock3, Coffee, TimerReset } from "lucide-react";
+import { CalendarDays, CheckCheck, Clock3, Coffee, Download, TimerReset, Undo2, Upload } from "lucide-react";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { formatDuration, formatMinute, formatSeconds } from "@/lib/time";
@@ -16,6 +16,12 @@ export function RightRail({
   onToggleTaskCompletion,
   onRemoveTask,
   onPomodoroTaskChange,
+  pomodoroPreferences,
+  onPomodoroPreferencesChange,
+  canUndo,
+  onUndo,
+  onExport,
+  onImport,
   onStartPause,
   onReset,
   focusState,
@@ -30,6 +36,22 @@ export function RightRail({
   onToggleTaskCompletion: (taskId: string) => void;
   onRemoveTask: (taskId: string) => void;
   onPomodoroTaskChange: (taskId: string | null) => void;
+  pomodoroPreferences: {
+    notificationsEnabled: boolean;
+    soundEnabled: boolean;
+    autoStartBreak: boolean;
+    autoStartFocus: boolean;
+  };
+  onPomodoroPreferencesChange: (next: Partial<{
+    notificationsEnabled: boolean;
+    soundEnabled: boolean;
+    autoStartBreak: boolean;
+    autoStartFocus: boolean;
+  }>) => void;
+  canUndo: boolean;
+  onUndo: () => void;
+  onExport: () => void;
+  onImport: (file: File) => void;
   onStartPause: () => void;
   onReset: () => void;
   focusState: PomodoroStatus;
@@ -45,6 +67,10 @@ export function RightRail({
     completed: "完了",
   };
 
+  const totalSeconds = pomodoro.mode === "focus" ? 25 * 60 : 5 * 60;
+  const progress = Math.min(1, Math.max(0, 1 - pomodoro.remainingSeconds / totalSeconds));
+  const ring = `conic-gradient(var(--accent) ${Math.round(progress * 360)}deg, rgba(148, 163, 184, 0.18) 0deg)`;
+
   return (
     <aside className="soft-scrollbar h-full overflow-y-auto pr-1">
       <div className="space-y-4 pb-4">
@@ -55,13 +81,25 @@ export function RightRail({
             borderColor: isFocusMode ? "var(--line-strong)" : "var(--line)",
           }}
         >
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
               <div className="text-[11px] uppercase tracking-[0.24em] text-muted">Pomodoro</div>
-              <div className="mt-3 text-5xl font-semibold tracking-tight">
-                {formatSeconds(pomodoro.remainingSeconds)}
+              <div className="mt-3 flex items-center gap-4">
+                <div className="grid h-16 w-16 place-items-center rounded-full" style={{ background: ring }}>
+                  <div
+                    className="grid h-[54px] w-[54px] place-items-center rounded-full text-xs font-semibold"
+                    style={{ background: "var(--panel-strong)", border: "1px solid var(--line)" }}
+                  >
+                    {Math.round(progress * 100)}%
+                  </div>
+                </div>
+                <div>
+                  <div className="text-5xl font-semibold tracking-tight">
+                    {formatSeconds(pomodoro.remainingSeconds)}
+                  </div>
+                  <div className="mt-2 text-sm text-muted">{statusText[focusState]}</div>
+                </div>
               </div>
-              <div className="mt-2 text-sm text-muted">{statusText[focusState]}</div>
             </div>
             <div
               className="rounded-full px-3 py-1 text-[11px] font-medium"
@@ -118,6 +156,52 @@ export function RightRail({
             >
               <TimerReset className="h-4 w-4" />
             </button>
+          </div>
+
+          <div className="mt-5 rounded-[20px] px-4 py-4" style={{ background: "var(--bg-muted)" }}>
+            <div className="text-[11px] uppercase tracking-[0.2em] text-muted">Settings</div>
+            <div className="mt-3 space-y-2 text-sm">
+              <label className="flex items-center justify-between gap-3">
+                <span className="text-muted">通知</span>
+                <input
+                  checked={pomodoroPreferences.notificationsEnabled}
+                  onChange={(event) =>
+                    onPomodoroPreferencesChange({ notificationsEnabled: event.target.checked })
+                  }
+                  type="checkbox"
+                />
+              </label>
+              <label className="flex items-center justify-between gap-3">
+                <span className="text-muted">サウンド</span>
+                <input
+                  checked={pomodoroPreferences.soundEnabled}
+                  onChange={(event) =>
+                    onPomodoroPreferencesChange({ soundEnabled: event.target.checked })
+                  }
+                  type="checkbox"
+                />
+              </label>
+              <label className="flex items-center justify-between gap-3">
+                <span className="text-muted">休憩を自動開始</span>
+                <input
+                  checked={pomodoroPreferences.autoStartBreak}
+                  onChange={(event) =>
+                    onPomodoroPreferencesChange({ autoStartBreak: event.target.checked })
+                  }
+                  type="checkbox"
+                />
+              </label>
+              <label className="flex items-center justify-between gap-3">
+                <span className="text-muted">集中を自動開始</span>
+                <input
+                  checked={pomodoroPreferences.autoStartFocus}
+                  onChange={(event) =>
+                    onPomodoroPreferencesChange({ autoStartFocus: event.target.checked })
+                  }
+                  type="checkbox"
+                />
+              </label>
+            </div>
           </div>
         </section>
 
@@ -237,6 +321,60 @@ export function RightRail({
             <MiniStat icon={<Coffee className="h-4 w-4" />} label="Focus" value={`${dashboard.pomodoroCount}`} />
             <MiniStat icon={<Clock3 className="h-4 w-4" />} label="Space" value={formatDuration(dashboard.freeMinutes)} />
           </div>
+        </section>
+
+        <section className="surface rounded-[24px] p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.24em] text-muted">Tools</div>
+              <div className="mt-2 text-lg font-semibold">Undo / Export</div>
+            </div>
+            <button
+              aria-label="Undo"
+              className="rounded-full p-2 transition"
+              disabled={!canUndo || isLocked}
+              onClick={onUndo}
+              style={{ background: "var(--bg-muted)", color: "var(--muted-strong)" }}
+              type="button"
+            >
+              <Undo2 className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <button
+              className="inline-flex items-center justify-center gap-2 rounded-[18px] px-4 py-3 text-sm transition"
+              onClick={onExport}
+              style={{ background: "var(--bg-muted)", color: "var(--muted-strong)" }}
+              type="button"
+            >
+              <Download className="h-4 w-4" />
+              Export
+            </button>
+
+            <label className="cursor-pointer">
+              <input
+                className="hidden"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) return;
+                  onImport(file);
+                  event.target.value = "";
+                }}
+                type="file"
+                accept="application/json"
+              />
+              <span
+                className="inline-flex w-full items-center justify-center gap-2 rounded-[18px] px-4 py-3 text-sm transition"
+                style={{ background: "var(--bg-muted)", color: "var(--muted-strong)" }}
+              >
+                <Upload className="h-4 w-4" />
+                Import
+              </span>
+            </label>
+          </div>
+
+          <p className="mt-3 text-xs text-muted">Undo は集中/休憩中は無効です。</p>
         </section>
       </div>
     </aside>

@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { Sparkles } from "lucide-react";
-import { addDays, format } from "date-fns";
+import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { formatDuration, formatMinute } from "@/lib/time";
 import { ThemeMode, ThemeToggle } from "@/components/theme-toggle";
@@ -17,6 +17,9 @@ export function SummaryPanel({
   focusSuggestion,
   isFocusMode,
   focusState,
+  weekDates,
+  selectedDate,
+  onDateChange,
 }: {
   dashboard: DashboardStats;
   theme: ThemeMode;
@@ -26,16 +29,30 @@ export function SummaryPanel({
   focusSuggestion: { startMinute: number; endMinute: number };
   isFocusMode: boolean;
   focusState: PomodoroStatus;
+  weekDates: string[];
+  selectedDate: string;
+  onDateChange: (dateKey: string) => void;
 }) {
   const today = new Date();
-  const weekStrip = Array.from({ length: 5 }, (_, index) => {
-    const date = addDays(today, index);
+  const parseDateKey = (dateKey: string) => {
+    const [year, month, day] = dateKey.split("-").map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  const weekStrip = weekDates.map((dateKey) => {
+    const date = parseDateKey(dateKey);
+    const isSelected = dateKey === selectedDate;
+    const isToday = format(date, "yyyy-MM-dd") === format(today, "yyyy-MM-dd");
     return {
+      dateKey,
       label: format(date, "E", { locale: ja }),
       day: format(date, "d"),
-      isToday: index === 0,
+      isToday,
+      isSelected,
     };
   });
+
+  const selectedDateObj = parseDateKey(selectedDate);
 
   return (
     <aside
@@ -51,10 +68,10 @@ export function SummaryPanel({
             <div>
               <p className="text-[11px] uppercase tracking-[0.24em] text-muted">Daily Focus</p>
               <h1 className="mt-3 text-3xl font-semibold tracking-tight">
-                {format(today, "M月d日", { locale: ja })}
+                {format(selectedDateObj, "M月d日", { locale: ja })}
               </h1>
               <p className="mt-1 text-sm text-muted">
-                {format(today, "EEEE", { locale: ja })}の流れを静かに整える
+                {format(selectedDateObj, "EEEE", { locale: ja })}の流れを静かに整える
               </p>
             </div>
             <ThemeToggle onToggle={onToggleTheme} theme={theme} />
@@ -107,17 +124,31 @@ export function SummaryPanel({
 
               <div className="mt-3 grid grid-cols-5 gap-2">
                 {weekStrip.map((item) => (
-                  <div
-                    key={`${item.label}-${item.day}`}
-                    className="rounded-[18px] px-2 py-3 text-center"
+                  <button
+                    key={item.dateKey}
+                    className={cn(
+                      "rounded-[18px] px-2 py-3 text-center transition",
+                      isFocusMode && "cursor-not-allowed",
+                    )}
+                    disabled={isFocusMode}
+                    onClick={() => onDateChange(item.dateKey)}
                     style={{
-                      background: item.isToday ? "var(--accent-soft)" : "transparent",
-                      border: item.isToday ? "1px solid var(--line-strong)" : "1px solid transparent",
+                      background: item.isSelected ? "var(--accent-soft)" : "transparent",
+                      border: item.isSelected ? "1px solid var(--line-strong)" : "1px solid transparent",
+                      opacity: isFocusMode ? 0.65 : 1,
                     }}
+                    type="button"
                   >
                     <div className="text-[10px] uppercase tracking-[0.18em] text-muted">{item.label}</div>
-                    <div className="mt-2 text-base font-semibold">{item.day}</div>
-                  </div>
+                    <div
+                      className={cn(
+                        "mt-2 text-base font-semibold",
+                        item.isToday && !item.isSelected && "opacity-90",
+                      )}
+                    >
+                      {item.day}
+                    </div>
+                  </button>
                 ))}
               </div>
             </div>
