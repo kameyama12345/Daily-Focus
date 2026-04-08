@@ -1,10 +1,50 @@
 ﻿"use client";
 
+import { useState } from "react";
 import { CalendarDays, CheckCheck, Clock3, Coffee, TimerReset, Undo2 } from "lucide-react";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { formatDuration, formatMinute, formatSeconds } from "@/lib/time";
 import { DashboardStats, PomodoroState, PomodoroStatus, Task, WorkLog } from "@/lib/types";
+import { GoogleIcon } from "@/components/icons/google";
+import { SpotifyIcon } from "@/components/icons/spotify";
+import { NotionIcon } from "@/components/icons/notion";
+
+function GoogleIconButton({ title }: { title: string }) {
+  return (
+    <span
+      aria-label={title}
+      className="grid h-10 w-10 place-items-center rounded-full transition"
+      style={{ background: "var(--panel-strong)", border: "1px solid var(--line)" }}
+    >
+      <GoogleIcon className="h-5 w-5" title={title} />
+    </span>
+  );
+}
+
+function SpotifyIconButton({ title }: { title: string }) {
+  return (
+    <span
+      aria-label={title}
+      className="grid h-10 w-10 place-items-center rounded-full transition"
+      style={{ background: "var(--panel-strong)", border: "1px solid var(--line)" }}
+    >
+      <SpotifyIcon className="h-5 w-5" title={title} />
+    </span>
+  );
+}
+
+function NotionIconButton({ title }: { title: string }) {
+  return (
+    <span
+      aria-label={title}
+      className="grid h-10 w-10 place-items-center rounded-full transition"
+      style={{ background: "var(--panel-strong)", border: "1px solid var(--line)" }}
+    >
+      <NotionIcon className="h-5 w-5" title={title} />
+    </span>
+  );
+}
 
 export function RightRail({
   tasks,
@@ -67,6 +107,10 @@ export function RightRail({
   const progress = Math.min(1, Math.max(0, 1 - pomodoro.remainingSeconds / totalSeconds));
   const ring = `conic-gradient(var(--accent) ${Math.round(progress * 360)}deg, rgba(148, 163, 184, 0.18) 0deg)`;
 
+  const [googleConnectOpen, setGoogleConnectOpen] = useState(false);
+  const [spotifyConnectOpen, setSpotifyConnectOpen] = useState(false);
+  const [notionConnectOpen, setNotionConnectOpen] = useState(false);
+
   return (
     <aside
       className="soft-scrollbar h-full overflow-y-auto pr-1 transition duration-300"
@@ -74,6 +118,131 @@ export function RightRail({
         opacity: isFocusMode ? (focusState === "running" ? 0.94 : 0.97) : 1,
       }}
     >
+      {googleConnectOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md"
+          style={{ background: "rgba(6, 10, 17, 0.32)" }}
+        >
+          <div
+            className="w-full max-w-lg rounded-[28px] p-6 shadow-float"
+            style={{ background: "var(--panel-strong)", border: "1px solid var(--line)" }}
+          >
+            <div className="text-[11px] uppercase tracking-[0.24em] text-muted">Google Calendar</div>
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight">連携（準備中）</h3>
+            <p className="mt-3 text-sm text-muted">
+              ここからGoogleカレンダー連携を開始できるようにします（今回はUIのみ）。
+            </p>
+
+            <div className="mt-6 flex items-center justify-end gap-2">
+              <button
+                className="rounded-full px-4 py-2 text-sm"
+                onClick={() => setGoogleConnectOpen(false)}
+                style={{
+                  background: "var(--button-secondary)",
+                  color: "var(--button-secondary-text)",
+                }}
+                type="button"
+              >
+                閉じる
+              </button>
+              <button
+                className="rounded-full px-5 py-2 text-sm font-medium"
+                disabled
+                style={{
+                  background: "var(--button-primary)",
+                  color: "var(--button-primary-text)",
+                  opacity: 0.55,
+                }}
+                type="button"
+              >
+                連携する
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {spotifyConnectOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md"
+          style={{ background: "rgba(6, 10, 17, 0.32)" }}
+        >
+          <div
+            className="w-full max-w-lg rounded-[28px] p-6 shadow-float"
+            style={{ background: "var(--panel-strong)", border: "1px solid var(--line)" }}
+          >
+            <div className="text-[11px] uppercase tracking-[0.24em] text-muted">Spotify</div>
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight">連携（準備中）</h3>
+            <p className="mt-3 text-sm text-muted">ここからSpotify連携を開始できるようにします（今回はUIのみ）。</p>
+
+            <div className="mt-6 flex items-center justify-end gap-2">
+              <button
+                className="rounded-full px-4 py-2 text-sm"
+                onClick={() => setSpotifyConnectOpen(false)}
+                style={{
+                  background: "var(--button-secondary)",
+                  color: "var(--button-secondary-text)",
+                }}
+                type="button"
+              >
+                閉じる
+              </button>
+              <button
+                className="rounded-full px-5 py-2 text-sm font-medium"
+                disabled
+                style={{
+                  background: "var(--button-primary)",
+                  color: "var(--button-primary-text)",
+                  opacity: 0.55,
+                }}
+                type="button"
+              >
+                連携する
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {notionConnectOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md"
+          style={{ background: "rgba(6, 10, 17, 0.32)" }}
+        >
+          <div
+            className="w-full max-w-lg rounded-[28px] p-6 shadow-float"
+            style={{ background: "var(--panel-strong)", border: "1px solid var(--line)" }}
+          >
+            <div className="text-[11px] uppercase tracking-[0.24em] text-muted">Notion</div>
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight">連携（準備中）</h3>
+            <p className="mt-3 text-sm text-muted">ここからNotion連携を開始できるようにします（今回はUIのみ）。</p>
+
+            <div className="mt-6 flex items-center justify-end gap-2">
+              <button
+                className="rounded-full px-4 py-2 text-sm"
+                onClick={() => setNotionConnectOpen(false)}
+                style={{
+                  background: "var(--button-secondary)",
+                  color: "var(--button-secondary-text)",
+                }}
+                type="button"
+              >
+                閉じる
+              </button>
+              <button
+                className="rounded-full px-5 py-2 text-sm font-medium"
+                disabled
+                style={{
+                  background: "var(--button-primary)",
+                  color: "var(--button-primary-text)",
+                  opacity: 0.55,
+                }}
+                type="button"
+              >
+                連携する
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="space-y-4 pb-4">
         <section
           className="surface rounded-[24px] p-6 transition duration-300"
@@ -165,49 +334,90 @@ export function RightRail({
             </button>
           </div>
 
-          <div className="mt-5 rounded-[20px] px-4 py-4" style={{ background: "var(--bg-muted)" }}>
-            <div className="text-[11px] uppercase tracking-[0.2em] text-muted">Settings</div>
-            <div className="mt-3 space-y-2 text-sm">
-              <label className="flex items-center justify-between gap-3">
-                <span className="text-muted">通知</span>
-                <input
-                  checked={pomodoroPreferences.notificationsEnabled}
-                  onChange={(event) =>
-                    onPomodoroPreferencesChange({ notificationsEnabled: event.target.checked })
-                  }
-                  type="checkbox"
-                />
-              </label>
-              <label className="flex items-center justify-between gap-3">
-                <span className="text-muted">サウンド</span>
-                <input
-                  checked={pomodoroPreferences.soundEnabled}
-                  onChange={(event) =>
-                    onPomodoroPreferencesChange({ soundEnabled: event.target.checked })
-                  }
-                  type="checkbox"
-                />
-              </label>
-              <label className="flex items-center justify-between gap-3">
-                <span className="text-muted">休憩を自動開始</span>
-                <input
-                  checked={pomodoroPreferences.autoStartBreak}
-                  onChange={(event) =>
-                    onPomodoroPreferencesChange({ autoStartBreak: event.target.checked })
-                  }
-                  type="checkbox"
-                />
-              </label>
-              <label className="flex items-center justify-between gap-3">
-                <span className="text-muted">集中を自動開始</span>
-                <input
-                  checked={pomodoroPreferences.autoStartFocus}
-                  onChange={(event) =>
-                    onPomodoroPreferencesChange({ autoStartFocus: event.target.checked })
-                  }
-                  type="checkbox"
-                />
-              </label>
+        </section>
+
+        <section className="surface rounded-[24px] p-5" style={{ opacity: isFocusMode ? 0.38 : 1 }}>
+          <div className="text-[11px] uppercase tracking-[0.2em] text-muted">Settings</div>
+          <div className="mt-3 space-y-2 text-sm">
+            <label className="flex items-center justify-between gap-3">
+              <span className="text-muted">通知</span>
+              <input
+                checked={pomodoroPreferences.notificationsEnabled}
+                onChange={(event) =>
+                  onPomodoroPreferencesChange({ notificationsEnabled: event.target.checked })
+                }
+                type="checkbox"
+              />
+            </label>
+            <label className="flex items-center justify-between gap-3">
+              <span className="text-muted">サウンド</span>
+              <input
+                checked={pomodoroPreferences.soundEnabled}
+                onChange={(event) => onPomodoroPreferencesChange({ soundEnabled: event.target.checked })}
+                type="checkbox"
+              />
+            </label>
+            <label className="flex items-center justify-between gap-3">
+              <span className="text-muted">休憩を自動開始</span>
+              <input
+                checked={pomodoroPreferences.autoStartBreak}
+                onChange={(event) => onPomodoroPreferencesChange({ autoStartBreak: event.target.checked })}
+                type="checkbox"
+              />
+            </label>
+            <label className="flex items-center justify-between gap-3">
+              <span className="text-muted">集中を自動開始</span>
+              <input
+                checked={pomodoroPreferences.autoStartFocus}
+                onChange={(event) => onPomodoroPreferencesChange({ autoStartFocus: event.target.checked })}
+                type="checkbox"
+              />
+            </label>
+          </div>
+
+          <div className="mt-5 rounded-[20px] px-4 py-3" style={{ background: "var(--bg-muted)" }}>
+            <div className="text-[11px] uppercase tracking-[0.2em] text-muted">Integrations</div>
+
+            <div className="mt-3 flex items-center justify-between">
+              <div className="text-sm font-medium">Googleカレンダー</div>
+              <button
+                aria-label="Googleカレンダー連携"
+                className="rounded-full transition"
+                disabled={isLocked}
+                onClick={() => setGoogleConnectOpen(true)}
+                style={{ opacity: isLocked ? 0.65 : 1 }}
+                type="button"
+              >
+                <GoogleIconButton title="Google" />
+              </button>
+            </div>
+
+            <div className="mt-3 flex items-center justify-between">
+              <div className="text-sm font-medium">Spotify</div>
+              <button
+                aria-label="Spotify連携"
+                className="rounded-full transition"
+                disabled={isLocked}
+                onClick={() => setSpotifyConnectOpen(true)}
+                style={{ opacity: isLocked ? 0.65 : 1 }}
+                type="button"
+              >
+                <SpotifyIconButton title="Spotify" />
+              </button>
+            </div>
+
+            <div className="mt-3 flex items-center justify-between">
+              <div className="text-sm font-medium">Notion</div>
+              <button
+                aria-label="Notion連携"
+                className="rounded-full transition"
+                disabled={isLocked}
+                onClick={() => setNotionConnectOpen(true)}
+                style={{ opacity: isLocked ? 0.65 : 1 }}
+                type="button"
+              >
+                <NotionIconButton title="Notion" />
+              </button>
             </div>
           </div>
         </section>

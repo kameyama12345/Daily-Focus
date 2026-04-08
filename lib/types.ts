@@ -27,6 +27,9 @@ export interface PomodoroState {
   mode: PomodoroPhase;
   isRunning: boolean;
   remainingSeconds: number;
+  endsAt?: string | null; // ISO string
+  pausedRemainingSeconds?: number | null;
+  runId?: string | null;
   selectedTaskId: string | null;
   completedCount: number;
   status: PomodoroStatus;

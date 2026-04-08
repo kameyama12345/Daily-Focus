@@ -70,9 +70,7 @@ export function SummaryPanel({
               <h1 className="mt-3 text-3xl font-semibold tracking-tight">
                 {format(selectedDateObj, "M月d日", { locale: ja })}
               </h1>
-              <p className="mt-1 text-sm text-muted">
-                {format(selectedDateObj, "EEEE", { locale: ja })}の流れを静かに整える
-              </p>
+              <p className="mt-1 text-sm text-muted">今日の予定を整える</p>
             </div>
             <ThemeToggle onToggle={onToggleTheme} theme={theme} />
           </div>

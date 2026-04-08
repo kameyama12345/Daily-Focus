@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Daily Focus (Popup)",
+  "version": "0.1.0",
+  "description": "Daily Focusのポモドーロをポップアップで操作します。",
+  "action": {
+    "default_title": "Daily Focus",
+    "default_popup": "popup.html"
+  },
+  "permissions": ["storage"]
+}
+

@@ -242,14 +242,18 @@ export function TimelineBoard({
 
           {tasks.map((task) => {
             const top = minuteToOffset(task.startMinute);
-            const height = Math.max(minuteToOffset(task.endMinute) - minuteToOffset(task.startMinute), 56);
+            const rawHeight = minuteToOffset(task.endMinute) - minuteToOffset(task.startMinute);
+            const height = Math.max(rawHeight, 56);
+            const isTiny = height < 78;
+            const isCompact = height < 110;
             const categoryStyle = CATEGORY_STYLES[task.category];
 
             return (
               <button
                 key={task.id}
                 className={cn(
-                  "group absolute left-24 right-6 rounded-[20px] p-4 text-left transition duration-200",
+                  "group absolute left-24 right-6 overflow-hidden rounded-[20px] text-left transition duration-200",
+                  isCompact ? "px-3 py-2.5" : "p-4",
                   dragState?.taskId === task.id && "scale-[1.01]",
                   disabled && "cursor-default",
                 )}
@@ -274,23 +278,31 @@ export function TimelineBoard({
                 type="button"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className={cn("h-2.5 w-2.5 rounded-full", categoryStyle.color)} />
-                      <p className="text-sm font-semibold">{task.title}</p>
+                      <p className="truncate text-sm font-semibold">{task.title}</p>
+                      {isTiny ? (
+                        <span className="shrink-0 text-[11px] font-medium text-muted">
+                          {formatMinute(task.startMinute)} - {formatMinute(task.endMinute)}
+                        </span>
+                      ) : null}
                     </div>
-                    <p className="mt-2 text-xs font-medium text-muted">
-                      {formatMinute(task.startMinute)} - {formatMinute(task.endMinute)}
-                    </p>
+                    {!isTiny ? (
+                      <p className={cn("text-xs font-medium text-muted", isCompact ? "mt-1" : "mt-2")}>
+                        {formatMinute(task.startMinute)} - {formatMinute(task.endMinute)}
+                      </p>
+                    ) : null}
                   </div>
 
                   <div className="flex items-center gap-2">
                     <button
                       aria-label="Edit task"
                       className={cn(
-                        "rounded-full p-2 transition",
+                        "rounded-full transition",
                         disabled && "pointer-events-none",
                         "opacity-0 group-hover:opacity-100",
+                        isTiny ? "p-1.5" : "p-2",
                       )}
                       onClick={(event) => {
                         if (disabled) return;
@@ -300,12 +312,12 @@ export function TimelineBoard({
                       style={{ background: "var(--bg-muted)", color: "var(--muted)" }}
                       type="button"
                     >
-                      <Pencil className="h-4 w-4" />
+                      <Pencil className={cn(isTiny ? "h-3.5 w-3.5" : "h-4 w-4")} />
                     </button>
 
                     <button
                       aria-label="Move task"
-                      className="cursor-grab rounded-full p-2 active:cursor-grabbing"
+                      className={cn("cursor-grab rounded-full active:cursor-grabbing", isTiny ? "p-1.5" : "p-2")}
                       disabled={disabled}
                       onPointerDown={(event) => {
                         if (disabled) return;
@@ -322,26 +334,30 @@ export function TimelineBoard({
                       style={{ background: "var(--bg-muted)", color: "var(--muted)" }}
                       type="button"
                     >
-                      <GripVertical className="h-4 w-4" />
+                      <GripVertical className={cn(isTiny ? "h-3.5 w-3.5" : "h-4 w-4")} />
                     </button>
                   </div>
                 </div>
 
-                <div className="mt-3 flex items-center gap-2">
-                  <span
-                    className={cn("rounded-full border px-2.5 py-1 text-[11px] font-medium", categoryStyle.chip)}
-                    style={{ opacity: 0.92 }}
-                  >
-                    {task.category}
-                  </span>
-                  {task.completed ? (
-                    <span className="text-[11px] font-medium" style={{ color: "var(--success)" }}>
-                      Completed
-                    </span>
-                  ) : null}
-                </div>
+                {!isCompact ? (
+                  <>
+                    <div className="mt-3 flex items-center gap-2">
+                      <span
+                        className={cn("rounded-full border px-2.5 py-1 text-[11px] font-medium", categoryStyle.chip)}
+                        style={{ opacity: 0.92 }}
+                      >
+                        {task.category}
+                      </span>
+                      {task.completed ? (
+                        <span className="text-[11px] font-medium" style={{ color: "var(--success)" }}>
+                          Completed
+                        </span>
+                      ) : null}
+                    </div>
 
-                <div className="mt-3 line-clamp-2 text-xs leading-5 text-muted">{task.memo}</div>
+                    <div className="mt-3 line-clamp-2 text-xs leading-5 text-muted">{task.memo}</div>
+                  </>
+                ) : null}
 
                 <button
                   className="absolute inset-x-6 bottom-2 h-1.5 cursor-ns-resize rounded-full"

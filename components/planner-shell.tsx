@@ -123,7 +123,7 @@ export function PlannerShell() {
               }}
             >
               <div className="mb-6 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="text-[11px] uppercase tracking-[0.24em] text-muted">TIME</div>
+                <div className="text-[11px] uppercase tracking-[0.24em] text-muted">Schedule</div>
                 <div className="flex flex-wrap items-center gap-2">
                   {isImmersiveMode ? (
                     <div

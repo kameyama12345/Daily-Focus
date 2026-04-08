@@ -34,12 +34,53 @@ interface PlannerStateV2 {
   preferences: PlannerPreferences;
 }
 
+function createRunId() {
+  return `run-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 function createTaskId() {
   return `task-${Math.random().toString(36).slice(2, 9)}`;
 }
 
 function createLogId() {
   return `log-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function defaultSecondsForMode(mode: PomodoroState["mode"]) {
+  return mode === "break" ? BREAK_SECONDS : FOCUS_SECONDS;
+}
+
+function computeRemainingSeconds(pomodoro: PomodoroState, nowMs: number) {
+  const endsAtMs = pomodoro.endsAt ? Date.parse(pomodoro.endsAt) : Number.NaN;
+  if (pomodoro.isRunning && Number.isFinite(endsAtMs)) {
+    return Math.max(0, Math.ceil((endsAtMs - nowMs) / 1000));
+  }
+
+  if (!pomodoro.isRunning && typeof pomodoro.pausedRemainingSeconds === "number") {
+    return Math.max(0, pomodoro.pausedRemainingSeconds);
+  }
+
+  if (typeof pomodoro.remainingSeconds === "number") {
+    return Math.max(0, pomodoro.remainingSeconds);
+  }
+
+  return defaultSecondsForMode(pomodoro.mode);
+}
+
+function computeDisplayStatus(pomodoro: PomodoroState, remainingSeconds: number): PomodoroStatus {
+  if (pomodoro.isRunning) {
+    return pomodoro.mode === "break" ? "break" : "running";
+  }
+  if (pomodoro.status === "paused") {
+    return "paused";
+  }
+  if (pomodoro.completedAt) {
+    return "completed";
+  }
+  if (remainingSeconds < defaultSecondsForMode(pomodoro.mode)) {
+    return "paused";
+  }
+  return "idle";
 }
 
 function computeFreeMinutes(tasks: Task[]) {
@@ -105,10 +146,44 @@ function defaultPreferences(partial?: Partial<PlannerPreferences>): PlannerPrefe
 }
 
 function normalizePomodoro(pomodoro: PomodoroState): PomodoroState {
+  const nowMs = Date.now();
+  const baseRemainingSeconds =
+    typeof pomodoro.remainingSeconds === "number" ? pomodoro.remainingSeconds : defaultSecondsForMode(pomodoro.mode);
+
+  if (pomodoro.isRunning) {
+    const endsAt =
+      pomodoro.endsAt ?? new Date(nowMs + Math.max(0, baseRemainingSeconds) * 1000).toISOString();
+    const remainingSeconds = computeRemainingSeconds({ ...pomodoro, endsAt }, nowMs);
+    return {
+      ...pomodoro,
+      remainingSeconds,
+      endsAt,
+      pausedRemainingSeconds: null,
+      runId: pomodoro.runId ?? null,
+      completedAt: pomodoro.completedAt ?? null,
+      status: computeDisplayStatus(pomodoro, remainingSeconds),
+    };
+  }
+
+  const pausedRemainingSeconds =
+    typeof pomodoro.pausedRemainingSeconds === "number"
+      ? pomodoro.pausedRemainingSeconds
+      : Math.max(0, baseRemainingSeconds);
+
+  const remainingSeconds = computeRemainingSeconds(
+    { ...pomodoro, pausedRemainingSeconds, endsAt: null, isRunning: false },
+    nowMs,
+  );
+
   return {
     ...pomodoro,
-    status: pomodoro.status ?? getPomodoroStatus(pomodoro),
+    isRunning: false,
+    endsAt: null,
+    pausedRemainingSeconds,
+    runId: pomodoro.runId ?? null,
+    remainingSeconds,
     completedAt: pomodoro.completedAt ?? null,
+    status: computeDisplayStatus(pomodoro, remainingSeconds),
   };
 }
 
@@ -237,6 +312,7 @@ export function useDailyPlanner() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
   const [historySize, setHistorySize] = useState(0);
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const lastNotifiedAtRef = useRef<string | null>(null);
   const historyRef = useRef<
     Array<{
@@ -259,74 +335,108 @@ export function useDailyPlanner() {
     if (!state.pomodoro.isRunning) return;
 
     const timer = window.setInterval(() => {
-      setState((current) => {
-        if (!current.pomodoro.isRunning) {
-          return current;
-        }
-
-        const activeDate = current.selectedDate;
-        const activeDay = normalizeDayState(current.days[activeDate]);
-
-        const nextSeconds = current.pomodoro.remainingSeconds - 1;
-        if (nextSeconds > 0) {
-          return {
-            ...current,
-            pomodoro: {
-              ...current.pomodoro,
-              remainingSeconds: nextSeconds,
-              status: current.pomodoro.mode === "break" ? "break" : "running",
-            },
-          };
-        }
-
-        const isFocusComplete = current.pomodoro.mode === "focus";
-        const linkedTask = activeDay.tasks.find(
-          (task) => task.id === current.pomodoro.selectedTaskId,
-        );
-
-        const nextMode = isFocusComplete ? "break" : "focus";
-        const nextSecondsReset = isFocusComplete ? BREAK_SECONDS : FOCUS_SECONDS;
-        const shouldAutoStart =
-          nextMode === "break" ? current.preferences.autoStartBreak : current.preferences.autoStartFocus;
-
-        return {
-          ...current,
-          days: {
-            ...current.days,
-            [activeDate]: {
-              ...activeDay,
-              logs: isFocusComplete
-                ? [
-                    {
-                      id: createLogId(),
-                      taskId: linkedTask?.id ?? null,
-                      taskTitle: linkedTask?.title ?? "Unassigned focus",
-                      minutes: 25,
-                      phase: "focus",
-                      completedAt: new Date().toISOString(),
-                    },
-                    ...activeDay.logs,
-                  ]
-                : activeDay.logs,
-            },
-          },
-          pomodoro: {
-            ...current.pomodoro,
-            mode: nextMode,
-            isRunning: shouldAutoStart,
-            completedCount: isFocusComplete
-              ? current.pomodoro.completedCount + 1
-              : current.pomodoro.completedCount,
-            remainingSeconds: nextSecondsReset,
-            completedAt: isFocusComplete ? new Date().toISOString() : null,
-            status: isFocusComplete ? "completed" : shouldAutoStart ? "running" : "idle",
-          },
-        };
-      });
+      setNowMs(Date.now());
     }, 1000);
 
     return () => window.clearInterval(timer);
   }, [state.pomodoro.isRunning]);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== STORAGE_KEY) return;
+      if (!event.newValue) return;
+      try {
+        const parsed = JSON.parse(event.newValue) as unknown;
+        const migrated = migrateToV2(parsed);
+        if (!migrated) return;
+        setState(migrated);
+        historyRef.current = [];
+        setHistorySize(0);
+      } catch {
+        // ignore
+      }
+    };
+
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [isHydrated]);
+
+  useEffect(() => {
+    if (!state.pomodoro.isRunning) return;
+    if (!state.pomodoro.endsAt) return;
+    const endsAtMs = Date.parse(state.pomodoro.endsAt);
+    if (!Number.isFinite(endsAtMs)) return;
+    if (nowMs < endsAtMs) return;
+
+    setState((current) => {
+      if (!current.pomodoro.isRunning) return current;
+      if (!current.pomodoro.endsAt) return current;
+      if (current.pomodoro.endsAt !== state.pomodoro.endsAt) return current;
+
+      const activeDate = current.selectedDate;
+      const activeDay = normalizeDayState(current.days[activeDate]);
+
+      const isFocusComplete = current.pomodoro.mode === "focus";
+      const nextMode = isFocusComplete ? "break" : "focus";
+      const nextSecondsReset = isFocusComplete ? BREAK_SECONDS : FOCUS_SECONDS;
+      const shouldAutoStart =
+        nextMode === "break" ? current.preferences.autoStartBreak : current.preferences.autoStartFocus;
+
+      const completedAt = isFocusComplete ? new Date(nowMs).toISOString() : null;
+      const nextEndsAt = shouldAutoStart ? new Date(nowMs + nextSecondsReset * 1000).toISOString() : null;
+
+      const linkedTask = activeDay.tasks.find((task) => task.id === current.pomodoro.selectedTaskId);
+      const runId = current.pomodoro.runId ?? createRunId();
+      const logId = `log-${runId}`;
+      const shouldAppendLog = isFocusComplete && !activeDay.logs.some((log) => log.id === logId);
+      const nextLogs = shouldAppendLog
+        ? [
+            {
+              id: logId,
+              taskId: linkedTask?.id ?? null,
+              taskTitle: linkedTask?.title ?? "Unassigned focus",
+              minutes: 25,
+              phase: "focus" as const,
+              completedAt: new Date(nowMs).toISOString(),
+            },
+            ...activeDay.logs,
+          ]
+        : activeDay.logs;
+
+      const nextStatus: PomodoroStatus = shouldAutoStart
+        ? nextMode === "break"
+          ? "break"
+          : "running"
+        : isFocusComplete
+          ? "completed"
+          : "idle";
+
+      return {
+        ...current,
+        days: {
+          ...current.days,
+          [activeDate]: {
+            ...activeDay,
+            logs: nextLogs,
+          },
+        },
+        pomodoro: {
+          ...current.pomodoro,
+          mode: nextMode,
+          isRunning: shouldAutoStart,
+          endsAt: nextEndsAt,
+          pausedRemainingSeconds: shouldAutoStart ? null : nextSecondsReset,
+          completedCount: shouldAppendLog ? current.pomodoro.completedCount + 1 : current.pomodoro.completedCount,
+          remainingSeconds: nextSecondsReset,
+          completedAt,
+          status: nextStatus,
+          runId: nextMode === "focus" ? null : runId,
+        },
+      };
+    });
+  }, [isHydrated, nowMs, state.pomodoro.endsAt, state.pomodoro.isRunning]);
 
   useEffect(() => {
     const activeDay = normalizeDayState(state.days[state.selectedDate]);
@@ -361,6 +471,16 @@ export function useDailyPlanner() {
       pomodoroCount: dayState.logs.filter((log) => log.phase === "focus").length,
     };
   }, [dayState.logs, dayState.tasks]);
+
+  const pomodoro = useMemo(() => {
+    const remainingSeconds = computeRemainingSeconds(state.pomodoro, nowMs);
+    const status = computeDisplayStatus(state.pomodoro, remainingSeconds);
+    return {
+      ...state.pomodoro,
+      remainingSeconds,
+      status,
+    };
+  }, [nowMs, state.pomodoro]);
 
   function pushHistory(snapshot: { selectedDate: string; day: DayState; pomodoro: PomodoroState }) {
     historyRef.current.push({
@@ -614,31 +734,45 @@ export function useDailyPlanner() {
   }
 
   function startPomodoro() {
-    setState((current) => ({
-      ...current,
-      pomodoro: {
-        ...current.pomodoro,
-        isRunning: true,
-        completedAt: null,
-        status: current.pomodoro.mode === "break" ? "break" : "running",
-      },
-    }));
+    setState((current) => {
+      const currentRemainingSeconds = computeRemainingSeconds(current.pomodoro, Date.now());
+      const endsAt = new Date(Date.now() + currentRemainingSeconds * 1000).toISOString();
+      const nextRunId =
+        current.pomodoro.mode === "focus"
+          ? current.pomodoro.runId ?? createRunId()
+          : current.pomodoro.runId ?? null;
+
+      return {
+        ...current,
+        pomodoro: {
+          ...current.pomodoro,
+          isRunning: true,
+          endsAt,
+          pausedRemainingSeconds: null,
+          remainingSeconds: currentRemainingSeconds,
+          runId: nextRunId,
+          completedAt: null,
+          status: current.pomodoro.mode === "break" ? "break" : "running",
+        },
+      };
+    });
   }
 
   function pausePomodoro() {
-    setState((current) => ({
-      ...current,
-      pomodoro: {
-        ...current.pomodoro,
-        isRunning: false,
-        status: getPomodoroStatus({
-          mode: current.pomodoro.mode,
+    setState((current) => {
+      const currentRemainingSeconds = computeRemainingSeconds(current.pomodoro, Date.now());
+      return {
+        ...current,
+        pomodoro: {
+          ...current.pomodoro,
           isRunning: false,
-          remainingSeconds: current.pomodoro.remainingSeconds,
-          completedAt: null,
-        }),
-      },
-    }));
+          endsAt: null,
+          pausedRemainingSeconds: currentRemainingSeconds,
+          remainingSeconds: currentRemainingSeconds,
+          status: "paused",
+        },
+      };
+    });
   }
 
   function resetPomodoro() {
@@ -648,7 +782,10 @@ export function useDailyPlanner() {
         ...current.pomodoro,
         isRunning: false,
         mode: "focus",
+        endsAt: null,
+        pausedRemainingSeconds: FOCUS_SECONDS,
         remainingSeconds: FOCUS_SECONDS,
+        runId: null,
         status: "idle",
         completedAt: null,
       },
@@ -804,7 +941,7 @@ export function useDailyPlanner() {
   return {
     tasks,
     logs: dayState.logs,
-    pomodoro: state.pomodoro,
+    pomodoro,
     selectedTask,
     dashboard,
     isHydrated,
