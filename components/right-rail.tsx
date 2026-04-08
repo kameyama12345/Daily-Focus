@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { CalendarDays, CheckCheck, Clock3, Coffee, Download, TimerReset, Undo2, Upload } from "lucide-react";
+import { CalendarDays, CheckCheck, Clock3, Coffee, TimerReset, Undo2 } from "lucide-react";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { formatDuration, formatMinute, formatSeconds } from "@/lib/time";
@@ -20,8 +20,6 @@ export function RightRail({
   onPomodoroPreferencesChange,
   canUndo,
   onUndo,
-  onExport,
-  onImport,
   onStartPause,
   onReset,
   focusState,
@@ -50,8 +48,6 @@ export function RightRail({
   }>) => void;
   canUndo: boolean;
   onUndo: () => void;
-  onExport: () => void;
-  onImport: (file: File) => void;
   onStartPause: () => void;
   onReset: () => void;
   focusState: PomodoroStatus;
@@ -72,7 +68,12 @@ export function RightRail({
   const ring = `conic-gradient(var(--accent) ${Math.round(progress * 360)}deg, rgba(148, 163, 184, 0.18) 0deg)`;
 
   return (
-    <aside className="soft-scrollbar h-full overflow-y-auto pr-1">
+    <aside
+      className="soft-scrollbar h-full overflow-y-auto pr-1 transition duration-300"
+      style={{
+        opacity: isFocusMode ? (focusState === "running" ? 0.94 : 0.97) : 1,
+      }}
+    >
       <div className="space-y-4 pb-4">
         <section
           className="surface rounded-[24px] p-6 transition duration-300"
@@ -140,9 +141,12 @@ export function RightRail({
 
           <div className="mt-5 flex gap-2">
             <button
-              className="flex-1 rounded-full px-4 py-3 text-sm font-medium text-white transition"
+              className="flex-1 rounded-full px-4 py-3 text-sm font-medium transition"
               onClick={onStartPause}
-              style={{ background: "var(--text)" }}
+              style={{
+                background: "var(--button-primary)",
+                color: "var(--button-primary-text)",
+              }}
               type="button"
             >
               {pomodoro.isRunning ? "Pause" : focusState === "completed" ? "Restart" : "Start"}
@@ -151,7 +155,10 @@ export function RightRail({
               aria-label="Reset pomodoro"
               className="rounded-full px-4 py-3 text-sm transition"
               onClick={onReset}
-              style={{ background: "var(--bg-muted)" }}
+              style={{
+                background: "var(--button-secondary)",
+                color: "var(--button-secondary-text)",
+              }}
               type="button"
             >
               <TimerReset className="h-4 w-4" />
@@ -224,7 +231,10 @@ export function RightRail({
                 className="rounded-full px-3 py-2 text-sm transition"
                 disabled={isLocked}
                 onClick={() => onEditTask(selectedTask)}
-                style={{ background: "var(--bg-muted)" }}
+                style={{
+                  background: "var(--button-secondary)",
+                  color: "var(--button-secondary-text)",
+                }}
                 type="button"
               >
                 編集
@@ -255,10 +265,13 @@ export function RightRail({
 
               <div className="flex gap-2 pt-1">
                 <button
-                  className="flex-1 rounded-full px-4 py-3 text-sm font-medium text-white transition"
+                  className="flex-1 rounded-full px-4 py-3 text-sm font-medium transition"
                   disabled={isLocked}
                   onClick={() => onToggleTaskCompletion(selectedTask.id)}
-                  style={{ background: "var(--text)" }}
+                  style={{
+                    background: "var(--button-primary)",
+                    color: "var(--button-primary-text)",
+                  }}
                   type="button"
                 >
                   {selectedTask.completed ? "未完了に戻す" : "完了にする"}
@@ -267,7 +280,7 @@ export function RightRail({
                   className="rounded-full px-4 py-3 text-sm transition"
                   disabled={isLocked}
                   onClick={() => onRemoveTask(selectedTask.id)}
-                  style={{ background: "var(--bg-muted)", color: "var(--danger)" }}
+                  style={{ background: "var(--button-secondary)", color: "var(--danger)" }}
                   type="button"
                 >
                   削除
@@ -327,51 +340,21 @@ export function RightRail({
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-[0.24em] text-muted">Tools</div>
-              <div className="mt-2 text-lg font-semibold">Undo / Export</div>
+              <div className="mt-2 text-lg font-semibold">Undo</div>
             </div>
             <button
               aria-label="Undo"
               className="rounded-full p-2 transition"
               disabled={!canUndo || isLocked}
               onClick={onUndo}
-              style={{ background: "var(--bg-muted)", color: "var(--muted-strong)" }}
+              style={{
+                background: "var(--button-secondary)",
+                color: "var(--button-secondary-text)",
+              }}
               type="button"
             >
               <Undo2 className="h-4 w-4" />
             </button>
-          </div>
-
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <button
-              className="inline-flex items-center justify-center gap-2 rounded-[18px] px-4 py-3 text-sm transition"
-              onClick={onExport}
-              style={{ background: "var(--bg-muted)", color: "var(--muted-strong)" }}
-              type="button"
-            >
-              <Download className="h-4 w-4" />
-              Export
-            </button>
-
-            <label className="cursor-pointer">
-              <input
-                className="hidden"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (!file) return;
-                  onImport(file);
-                  event.target.value = "";
-                }}
-                type="file"
-                accept="application/json"
-              />
-              <span
-                className="inline-flex w-full items-center justify-center gap-2 rounded-[18px] px-4 py-3 text-sm transition"
-                style={{ background: "var(--bg-muted)", color: "var(--muted-strong)" }}
-              >
-                <Upload className="h-4 w-4" />
-                Import
-              </span>
-            </label>
           </div>
 
           <p className="mt-3 text-xs text-muted">Undo は集中/休憩中は無効です。</p>

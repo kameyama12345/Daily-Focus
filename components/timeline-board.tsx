@@ -130,16 +130,27 @@ export function TimelineBoard({
   return (
     <div
       className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[24px]"
-      style={{ background: "var(--panel-soft)", border: "1px solid var(--line)" }}
+      style={{
+        background:
+          focusState === "running" || focusState === "paused" || focusState === "break"
+            ? "var(--focus-dim-panel)"
+            : "var(--panel-soft)",
+        border: "1px solid var(--line)",
+      }}
       onPointerMove={disabled ? undefined : commitDrag}
       onPointerUp={() => setDragState(null)}
       onPointerLeave={() => setDragState(null)}
     >
       <div
         className="sticky top-0 z-20 flex items-center gap-3 px-6 py-4 backdrop-blur-md"
-        style={{ background: "var(--panel-soft)" }}
+        style={{
+          background:
+            focusState === "running" || focusState === "paused" || focusState === "break"
+              ? "var(--focus-dim-panel)"
+              : "var(--panel-soft)",
+        }}
       >
-        <div className="w-16 text-[11px] uppercase tracking-[0.24em] text-muted">Time</div>
+        <div className="w-16 text-[11px] uppercase tracking-[0.24em] text-muted">TIME</div>
         <div className="flex-1 text-[11px] uppercase tracking-[0.24em] text-muted">Schedule</div>
         <button
           className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs transition"
@@ -156,12 +167,14 @@ export function TimelineBoard({
         className="soft-scrollbar relative min-h-0 flex-1 overflow-y-auto transition duration-300"
         ref={scrollRef}
         style={{
-          opacity: focusState === "running" ? 0.72 : focusState === "paused" ? 0.82 : 1,
+          opacity: focusState === "running" ? 0.64 : focusState === "paused" ? 0.76 : focusState === "break" ? 0.82 : 1,
           filter:
             focusState === "running"
-              ? "saturate(0.84)"
+              ? "saturate(0.72)"
+              : focusState === "paused"
+                ? "saturate(0.8)"
               : focusState === "break"
-                ? "saturate(0.9)"
+                ? "saturate(0.86)"
                 : "none",
         }}
       >
@@ -210,15 +223,19 @@ export function TimelineBoard({
             >
               <div className="w-20 px-6">
                 <div
-                  className="inline-flex rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-white"
-                  style={{ background: "var(--text)" }}
+                  className="inline-flex rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.24em]"
+                  style={{
+                    background: "var(--button-primary)",
+                    color: "var(--button-primary-text)",
+                    boxShadow: "0 6px 16px rgba(0, 0, 0, 0.18)",
+                  }}
                 >
                   Now
                 </div>
               </div>
               <div className="mr-6 flex flex-1 items-center">
-                <div className="h-2.5 w-2.5 rounded-full" style={{ background: "var(--text)" }} />
-                <div className="h-px flex-1" style={{ background: "var(--line-strong)" }} />
+                <div className="h-2.5 w-2.5 rounded-full" style={{ background: "var(--button-primary)" }} />
+                <div className="h-px flex-1" style={{ background: "var(--accent)" }} />
               </div>
             </div>
           ) : null}

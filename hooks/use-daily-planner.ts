@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { BREAK_SECONDS, FOCUS_SECONDS, MINUTES_IN_DAY } from "@/lib/constants";
 import { initialPomodoro, sampleLogs, sampleTasks } from "@/lib/sample-data";
 import { clamp, snapMinute } from "@/lib/time";
-import { DashboardStats, PomodoroState, PomodoroStatus, Task, WorkLog } from "@/lib/types";
+import { DashboardStats, PomodoroState, PomodoroStatus, SchedulePreset, Task, WorkLog } from "@/lib/types";
 import { ThemeMode } from "@/components/theme-toggle";
 
 const STORAGE_KEY = "daily-focus-state";
@@ -85,6 +85,12 @@ function addDays(dateKey: string, delta: number) {
   const date = new Date(year, month - 1, day);
   date.setDate(date.getDate() + delta);
   return toDateKey(date);
+}
+
+function toMinute(value: string) {
+  const [hour, minute] = value.split(":").map(Number);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return 0;
+  return hour * 60 + minute;
 }
 
 function defaultPreferences(partial?: Partial<PlannerPreferences>): PlannerPreferences {
@@ -542,6 +548,52 @@ export function useDailyPlanner() {
     setSelectedTaskId(task.id);
   }
 
+  function applySchedulePreset(preset: SchedulePreset) {
+    const nextTasks: Task[] = preset.items
+      .map((item) => {
+        const startMinute = clamp(snapMinute(toMinute(item.start)), 0, MINUTES_IN_DAY - 15);
+        const endMinute = clamp(snapMinute(toMinute(item.end)), 15, MINUTES_IN_DAY);
+        const normalizedEnd = endMinute <= startMinute ? clamp(startMinute + 30, 15, MINUTES_IN_DAY) : endMinute;
+
+        return {
+          id: createTaskId(),
+          title: item.title,
+          startMinute,
+          endMinute: normalizedEnd,
+          category: item.category ?? "Deep Work",
+          priority: item.priority ?? "Medium",
+          memo: "",
+          completed: false,
+        };
+      })
+      .sort((a, b) => a.startMinute - b.startMinute);
+
+    setState((current) => {
+      const activeDate = current.selectedDate;
+      const activeDay = normalizeDayState(current.days[activeDate]);
+      pushHistory({ selectedDate: activeDate, day: activeDay, pomodoro: current.pomodoro });
+
+      const nextPomodoroSelected = nextTasks[0]?.id ?? null;
+
+      return {
+        ...current,
+        days: {
+          ...current.days,
+          [activeDate]: {
+            ...activeDay,
+            tasks: nextTasks,
+          },
+        },
+        pomodoro: {
+          ...current.pomodoro,
+          selectedTaskId: nextPomodoroSelected,
+        },
+      };
+    });
+
+    setSelectedTaskId(nextTasks[0]?.id ?? null);
+  }
+
   function selectTask(taskId: string | null) {
     setSelectedTaskId(taskId);
   }
@@ -765,6 +817,7 @@ export function useDailyPlanner() {
     updateTaskPosition,
     toggleTaskCompletion,
     addQuickTask,
+    applySchedulePreset,
     selectTask,
     setPomodoroTask,
     startPomodoro,

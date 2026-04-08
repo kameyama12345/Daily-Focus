@@ -58,8 +58,8 @@ export function SummaryPanel({
     <aside
       className="soft-scrollbar h-full overflow-y-auto pr-1 transition duration-300"
       style={{
-        opacity: isFocusMode ? (focusState === "running" ? 0.42 : 0.62) : 1,
-        filter: isFocusMode ? "saturate(0.82)" : "none",
+        opacity: isFocusMode ? (focusState === "running" ? 0.22 : focusState === "paused" ? 0.34 : 0.42) : 1,
+        filter: isFocusMode ? "saturate(0.68) blur(0.6px)" : "none",
       }}
     >
       <div className="space-y-4 pb-4">
@@ -110,10 +110,17 @@ export function SummaryPanel({
                       key={mode}
                       className={cn(
                         "rounded-full px-3 py-1.5 text-xs transition",
-                        viewMode === mode ? "text-white" : "text-muted",
+                        viewMode === mode ? "" : "text-muted",
                       )}
                       onClick={() => onViewModeChange(mode)}
-                      style={viewMode === mode ? { background: "var(--text)" } : undefined}
+                      style={
+                        viewMode === mode
+                          ? {
+                              background: "var(--button-primary)",
+                              color: "var(--button-primary-text)",
+                            }
+                          : undefined
+                      }
                       type="button"
                     >
                       {mode === "day" ? "Day" : "Week"}

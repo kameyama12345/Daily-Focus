@@ -180,19 +180,25 @@ export function TaskEditor({
             <button
               className="rounded-full px-4 py-2 text-sm"
               onClick={onClose}
-              style={{ background: "var(--bg-muted)", color: "var(--muted-strong)" }}
+              style={{
+                background: "var(--button-secondary)",
+                color: "var(--button-secondary-text)",
+              }}
               type="button"
             >
               キャンセル
             </button>
             <button
-              className="rounded-full px-5 py-2 text-sm font-medium text-white"
+              className="rounded-full px-5 py-2 text-sm font-medium"
               onClick={() => {
                 if (!form.title.trim()) return;
                 onSave({ ...form, title: form.title.trim() });
                 onClose();
               }}
-              style={{ background: "var(--text)" }}
+              style={{
+                background: "var(--button-primary)",
+                color: "var(--button-primary-text)",
+              }}
               type="button"
             >
               保存

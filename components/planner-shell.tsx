@@ -1,9 +1,12 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
-import { Download, Plus, Upload } from "lucide-react";
 import { useDailyPlanner } from "@/hooks/use-daily-planner";
-import { Task } from "@/lib/types";
+import { RECOMMENDED_SCHEDULE_PRESETS, TEMPLATE_SCHEDULE_PRESETS } from "@/lib/schedule-presets";
+import { SchedulePreset, Task } from "@/lib/types";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { HeaderActions } from "@/components/header-actions";
+import { SchedulePresetModal } from "@/components/schedule-preset-modal";
 import { TaskEditor } from "@/components/task-editor";
 import { TimelineBoard } from "@/components/timeline-board";
 import { SummaryPanel } from "@/components/summary-panel";
@@ -14,6 +17,9 @@ export function PlannerShell() {
   const planner = useDailyPlanner();
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorTask, setEditorTask] = useState<Partial<Task> | null>(null);
+  const [presetModal, setPresetModal] = useState<SchedulePreset["type"] | null>(null);
+  const [pendingPreset, setPendingPreset] = useState<SchedulePreset | null>(null);
+  const [confirmReplaceOpen, setConfirmReplaceOpen] = useState(false);
 
   useEffect(() => {
     applyTheme(planner.preferences.theme);
@@ -49,33 +55,22 @@ export function PlannerShell() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isEditLocked, planner.canUndo, planner.undo]);
 
-  function exportToFile() {
-    const payload = planner.exportState();
-    const json = JSON.stringify(payload, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `daily-focus-${planner.selectedDate}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }
-
-  async function importFromFile(file: File) {
-    try {
-      const text = await file.text();
-      const payload = JSON.parse(text) as unknown;
-      planner.importState(payload);
-    } catch {
-      // ignore
-    }
-  }
-
   function formatDateLabel(dateKey: string) {
     const [, month, day] = dateKey.split("-");
     return `${Number(month)}月${Number(day)}日`;
+  }
+
+  function onSelectPreset(preset: SchedulePreset) {
+    const hasExistingSchedule = planner.tasks.length > 0;
+    setPresetModal(null);
+
+    if (!hasExistingSchedule) {
+      planner.applySchedulePreset(preset);
+      return;
+    }
+
+    setPendingPreset(preset);
+    setConfirmReplaceOpen(true);
   }
 
   return (
@@ -117,82 +112,37 @@ export function PlannerShell() {
               weekDates={planner.weekDates}
             />
 
-            <section className="surface relative flex h-full min-h-0 flex-col rounded-[28px] p-5 md:p-6">
-              <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.24em] text-muted">
-                    {viewMode === "week" ? "Week" : "Day"} · {formatDateLabel(planner.selectedDate)}
-                  </p>
-                  <h2 className="mt-2 text-[32px] font-semibold tracking-tight">
-                    {viewMode === "week" ? "1週間の流れを俯瞰する" : "タイムラインを主役にした1日"}
-                  </h2>
-                  <p className="mt-2 text-sm text-muted">
-                    {statusCopy[pomodoroStatus]}。時間の流れを追いながら、必要な時だけ操作します。
-                  </p>
+            <section
+              className="surface relative flex h-full min-h-0 flex-col rounded-[28px] p-5 transition-[opacity,filter,background-color,border-color] duration-300 md:p-6"
+              style={{
+                background: isImmersiveMode ? "var(--focus-dim-surface)" : "var(--panel)",
+                borderColor: isImmersiveMode ? "var(--line-strong)" : "var(--line)",
+                opacity:
+                  pomodoroStatus === "running" ? 0.78 : pomodoroStatus === "paused" ? 0.86 : pomodoroStatus === "break" ? 0.9 : 1,
+                filter: isImmersiveMode ? "saturate(0.78)" : "none",
+              }}
+            >
+              <div className="mb-6 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-[11px] uppercase tracking-[0.24em] text-muted">TIME</div>
+                <div className="flex flex-wrap items-center gap-2">
                   {isImmersiveMode ? (
                     <div
-                      className="mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs"
+                      className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs"
                       style={{ background: "var(--bg-muted)", color: "var(--muted-strong)" }}
                     >
                       <span className="h-2 w-2 rounded-full" style={{ background: "var(--accent)" }} />
                       編集ロック中（{statusCopy[pomodoroStatus]}）
                     </div>
                   ) : null}
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    className="rounded-full px-4 py-2.5 text-sm transition"
+                  <HeaderActions
                     disabled={isEditLocked}
-                    onClick={planner.addQuickTask}
-                    style={{ background: "var(--bg-muted)" }}
-                    type="button"
-                  >
-                    <Plus className="mr-1 inline h-4 w-4" />
-                    1時間ブロック
-                  </button>
-                  <button
-                    className="rounded-full px-4 py-2.5 text-sm text-white transition"
-                    disabled={isEditLocked}
-                    onClick={() => {
+                    onNewTask={() => {
                       setEditorTask(null);
                       setEditorOpen(true);
                     }}
-                    style={{ background: "var(--text)" }}
-                    type="button"
-                  >
-                    <Plus className="mr-1 inline h-4 w-4" />
-                    新規タスク
-                  </button>
-                  <button
-                    className="rounded-full px-4 py-2.5 text-sm transition"
-                    onClick={exportToFile}
-                    style={{ background: "var(--bg-muted)" }}
-                    type="button"
-                  >
-                    <Download className="mr-1 inline h-4 w-4" />
-                    Export
-                  </button>
-                  <label className="cursor-pointer">
-                    <input
-                      className="hidden"
-                      onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        if (!file) return;
-                        void importFromFile(file);
-                        event.target.value = "";
-                      }}
-                      type="file"
-                      accept="application/json"
-                    />
-                    <span
-                      className="inline-flex items-center rounded-full px-4 py-2.5 text-sm transition"
-                      style={{ background: "var(--bg-muted)" }}
-                    >
-                      <Upload className="mr-1 inline h-4 w-4" />
-                      Import
-                    </span>
-                  </label>
+                    onOpenRecommended={() => setPresetModal("recommended")}
+                    onOpenTemplate={() => setPresetModal("template")}
+                  />
                 </div>
               </div>
 
@@ -202,14 +152,14 @@ export function PlannerShell() {
                   style={{
                     background:
                       pomodoroStatus === "running"
-                        ? "rgba(10, 14, 22, 0.20)"
+                        ? "rgba(10, 14, 22, 0.12)"
                         : pomodoroStatus === "paused"
-                          ? "rgba(10, 14, 22, 0.12)"
+                          ? "rgba(10, 14, 22, 0.08)"
                           : pomodoroStatus === "break"
-                            ? "rgba(71, 85, 105, 0.08)"
+                            ? "rgba(71, 85, 105, 0.05)"
                             : "transparent",
                     opacity: isImmersiveMode ? 1 : 0,
-                    backdropFilter: isImmersiveMode ? "blur(3px) saturate(0.9)" : "blur(0px)",
+                    backdropFilter: isImmersiveMode ? "blur(2px) saturate(0.82)" : "blur(0px)",
                     pointerEvents: "none",
                   }}
                 />
@@ -310,8 +260,6 @@ export function PlannerShell() {
                 setEditorTask(task);
                 setEditorOpen(true);
               }}
-              onExport={exportToFile}
-              onImport={importFromFile}
               onUndo={() => {
                 if (isEditLocked) return;
                 planner.undo();
@@ -339,6 +287,38 @@ export function PlannerShell() {
         onSave={planner.saveTask}
         open={editorOpen && !isEditLocked}
         suggestedTask={editorTask}
+      />
+
+      <SchedulePresetModal
+        onClose={() => setPresetModal(null)}
+        onSelect={onSelectPreset}
+        open={presetModal === "recommended"}
+        presets={RECOMMENDED_SCHEDULE_PRESETS}
+        title="おすすめスケジュール"
+      />
+      <SchedulePresetModal
+        onClose={() => setPresetModal(null)}
+        onSelect={onSelectPreset}
+        open={presetModal === "template"}
+        presets={TEMPLATE_SCHEDULE_PRESETS}
+        title="テンプレート"
+      />
+
+      <ConfirmDialog
+        cancelLabel="キャンセル"
+        confirmLabel="置き換える"
+        message="現在のスケジュールを置き換えますか？"
+        onCancel={() => {
+          setConfirmReplaceOpen(false);
+          setPendingPreset(null);
+        }}
+        onConfirm={() => {
+          if (pendingPreset) planner.applySchedulePreset(pendingPreset);
+          setConfirmReplaceOpen(false);
+          setPendingPreset(null);
+        }}
+        open={confirmReplaceOpen}
+        title="確認"
       />
     </main>
   );

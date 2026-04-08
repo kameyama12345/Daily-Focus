@@ -40,3 +40,21 @@ export interface DashboardStats {
   freeMinutes: number;
   pomodoroCount: number;
 }
+
+export type SchedulePresetType = "recommended" | "template";
+
+export interface SchedulePresetItem {
+  title: string;
+  start: string; // "HH:MM"
+  end: string; // "HH:MM"
+  category?: Category;
+  priority?: Priority;
+  kind?: string;
+}
+
+export interface SchedulePreset {
+  id: string;
+  type: SchedulePresetType;
+  title: string;
+  items: SchedulePresetItem[];
+}

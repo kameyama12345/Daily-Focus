@@ -17,6 +17,12 @@
   --muted-strong: #475467;
   --accent: #3b82f6;
   --accent-soft: rgba(59, 130, 246, 0.12);
+  --button-primary: #111827;
+  --button-primary-text: #ffffff;
+  --button-secondary: rgba(246, 248, 251, 0.9);
+  --button-secondary-text: #111827;
+  --focus-dim-surface: rgba(255, 255, 255, 0.62);
+  --focus-dim-panel: rgba(248, 250, 252, 0.68);
   --success: #0f766e;
   --danger: #b42318;
   --shadow-panel: 0 18px 60px rgba(15, 23, 42, 0.06);
@@ -41,6 +47,12 @@
   --muted-strong: rgba(196, 203, 214, 0.8);
   --accent: #7aa2ff;
   --accent-soft: rgba(122, 162, 255, 0.14);
+  --button-primary: #7aa2ff;
+  --button-primary-text: #0d1117;
+  --button-secondary: rgba(27, 36, 50, 0.92);
+  --button-secondary-text: rgba(244, 247, 251, 0.94);
+  --focus-dim-surface: rgba(20, 28, 40, 0.78);
+  --focus-dim-panel: rgba(22, 31, 45, 0.8);
   --success: #5eead4;
   --danger: #fda29b;
   --shadow-panel: 0 20px 80px rgba(0, 0, 0, 0.28);
@@ -84,6 +96,11 @@ select,
 input,
 textarea {
   color: inherit;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent);
 }
 
 button:disabled,
