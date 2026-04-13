@@ -19,11 +19,13 @@ export function TaskEditor({
   suggestedTask,
   onClose,
   onSave,
+  onDelete,
 }: {
   open: boolean;
   suggestedTask: Partial<Task> | null;
   onClose: () => void;
   onSave: (task: Partial<Task> & Pick<Task, "title">) => void;
+  onDelete: (taskId: string) => void;
 }) {
   const defaults = useMemo(
     () => ({
@@ -44,6 +46,8 @@ export function TaskEditor({
   useEffect(() => {
     setForm(defaults);
   }, [defaults]);
+
+  const canDelete = Boolean(suggestedTask?.id);
 
   if (!open) return null;
 
@@ -177,6 +181,24 @@ export function TaskEditor({
             完了にする
           </label>
           <div className="flex gap-2">
+            {canDelete ? (
+              <button
+                className="rounded-full px-4 py-2 text-sm transition"
+                onClick={() => {
+                  const taskId = suggestedTask?.id;
+                  if (!taskId) return;
+                  onDelete(taskId);
+                  onClose();
+                }}
+                style={{
+                  background: "var(--button-secondary)",
+                  color: "var(--danger)",
+                }}
+                type="button"
+              >
+                削除
+              </button>
+            ) : null}
             <button
               className="rounded-full px-4 py-2 text-sm"
               onClick={onClose}

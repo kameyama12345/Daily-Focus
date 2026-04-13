@@ -61,3 +61,13 @@ export interface SchedulePreset {
   title: string;
   items: SchedulePresetItem[];
 }
+
+export type InboxStatus = "inbox" | "today" | "done";
+
+export type InboxItem = {
+  id: string;
+  title: string;
+  status: InboxStatus;
+  createdAt: string;
+  previousStatus?: Exclude<InboxStatus, "done">;
+};

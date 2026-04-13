@@ -56,9 +56,9 @@ export function HeaderActions({
         }}
         type="button"
       >
-        <Plus className="mr-1 inline h-4 w-4" />+ 新規タスク
+        <Plus className="mr-1 inline h-4 w-4" />
+        新規タスク
       </button>
     </div>
   );
 }
-

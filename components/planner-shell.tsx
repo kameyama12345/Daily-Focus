@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useDailyPlanner } from "@/hooks/use-daily-planner";
+import { useInbox } from "@/hooks/use-inbox";
 import { RECOMMENDED_SCHEDULE_PRESETS, TEMPLATE_SCHEDULE_PRESETS } from "@/lib/schedule-presets";
 import { SchedulePreset, Task } from "@/lib/types";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -15,6 +16,7 @@ import { applyTheme } from "@/components/theme-toggle";
 
 export function PlannerShell() {
   const planner = useDailyPlanner();
+  const inbox = useInbox();
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorTask, setEditorTask] = useState<Partial<Task> | null>(null);
   const [presetModal, setPresetModal] = useState<SchedulePreset["type"] | null>(null);
@@ -99,14 +101,29 @@ export function PlannerShell() {
               focusSuggestion={focusSuggestion}
               focusState={pomodoroStatus}
               isFocusMode={isImmersiveMode}
+              inbox={inbox}
+              onEditTask={(task) => {
+                if (isEditLocked) return;
+                setEditorTask(task);
+                setEditorOpen(true);
+              }}
+              onRemoveTask={(taskId) => {
+                if (isEditLocked) return;
+                planner.removeTask(taskId);
+              }}
               onToggleTheme={() =>
                 planner.setTheme(planner.preferences.theme === "dark" ? "light" : "dark")
               }
+              onToggleTaskCompletion={(taskId) => {
+                if (isEditLocked) return;
+                planner.toggleTaskCompletion(taskId);
+              }}
               onViewModeChange={planner.setViewMode}
               onDateChange={(dateKey) => {
                 if (!isEditLocked) planner.setSelectedDate(dateKey);
               }}
               selectedDate={planner.selectedDate}
+              selectedTask={planner.selectedTask}
               theme={planner.preferences.theme}
               viewMode={viewMode}
               weekDates={planner.weekDates}
@@ -231,6 +248,14 @@ export function PlannerShell() {
                     disabled={isEditLocked}
                     focusState={pomodoroStatus}
                     tasks={planner.tasks}
+                    onDropExternalTask={({ title, startMinute, endMinute, inboxItemId }) => {
+                      if (isEditLocked) return;
+                      planner.saveTask({ title, startMinute, endMinute });
+                    }}
+                    onRemoveTask={(taskId) => {
+                      if (isEditLocked) return;
+                      planner.removeTask(taskId);
+                    }}
                     onCreateTask={(startMinute, endMinute) => {
                       if (isEditLocked) return;
                       setEditorTask({ startMinute, endMinute, title: "" });
@@ -255,24 +280,16 @@ export function PlannerShell() {
               isFocusMode={isImmersiveMode}
               logs={planner.logs}
               canUndo={planner.canUndo}
-              onEditTask={(task) => {
-                if (isEditLocked) return;
-                setEditorTask(task);
-                setEditorOpen(true);
-              }}
               onUndo={() => {
                 if (isEditLocked) return;
                 planner.undo();
               }}
               onPomodoroTaskChange={planner.setPomodoroTask}
               onPomodoroPreferencesChange={planner.updatePomodoroPreferences}
-              onRemoveTask={planner.removeTask}
               onReset={planner.resetPomodoro}
               onStartPause={planner.pomodoro.isRunning ? planner.pausePomodoro : planner.startPomodoro}
-              onToggleTaskCompletion={planner.toggleTaskCompletion}
               pomodoro={planner.pomodoro}
               pomodoroPreferences={planner.preferences}
-              selectedTask={planner.selectedTask}
               tasks={planner.tasks}
             />
           </div>
@@ -283,6 +300,10 @@ export function PlannerShell() {
         onClose={() => {
           setEditorOpen(false);
           setEditorTask(null);
+        }}
+        onDelete={(taskId) => {
+          if (isEditLocked) return;
+          planner.removeTask(taskId);
         }}
         onSave={planner.saveTask}
         open={editorOpen && !isEditLocked}

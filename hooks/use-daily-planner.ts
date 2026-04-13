@@ -734,9 +734,11 @@ export function useDailyPlanner() {
   }
 
   function startPomodoro() {
+    const timestampMs = Date.now();
+    setNowMs(timestampMs);
     setState((current) => {
-      const currentRemainingSeconds = computeRemainingSeconds(current.pomodoro, Date.now());
-      const endsAt = new Date(Date.now() + currentRemainingSeconds * 1000).toISOString();
+      const currentRemainingSeconds = computeRemainingSeconds(current.pomodoro, timestampMs);
+      const endsAt = new Date(timestampMs + currentRemainingSeconds * 1000).toISOString();
       const nextRunId =
         current.pomodoro.mode === "focus"
           ? current.pomodoro.runId ?? createRunId()
@@ -759,8 +761,10 @@ export function useDailyPlanner() {
   }
 
   function pausePomodoro() {
+    const timestampMs = Date.now();
+    setNowMs(timestampMs);
     setState((current) => {
-      const currentRemainingSeconds = computeRemainingSeconds(current.pomodoro, Date.now());
+      const currentRemainingSeconds = computeRemainingSeconds(current.pomodoro, timestampMs);
       return {
         ...current,
         pomodoro: {
@@ -776,6 +780,7 @@ export function useDailyPlanner() {
   }
 
   function resetPomodoro() {
+    setNowMs(Date.now());
     setState((current) => ({
       ...current,
       pomodoro: {

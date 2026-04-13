@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Clock3, GripVertical, Pencil } from "lucide-react";
+import { Clock3, Pencil, Trash2 } from "lucide-react";
 import {
   CATEGORY_STYLES,
   END_HOUR,
   HOUR_HEIGHT,
   MINUTES_IN_DAY,
+  SNAP_MINUTES,
   START_HOUR,
 } from "@/lib/constants";
 import { clamp, formatMinute, minuteToOffset, offsetToMinute, snapMinute } from "@/lib/time";
@@ -46,6 +47,8 @@ export function TimelineBoard({
   onSelectTask,
   onEditTask,
   onCreateTask,
+  onDropExternalTask,
+  onRemoveTask,
   onUpdateTask,
   disabled,
   focusState,
@@ -55,6 +58,8 @@ export function TimelineBoard({
   onSelectTask: (taskId: string | null) => void;
   onEditTask: (task: Task) => void;
   onCreateTask: (startMinute: number, endMinute: number) => void;
+  onDropExternalTask?: (payload: { title: string; startMinute: number; endMinute: number; inboxItemId?: string }) => void;
+  onRemoveTask?: (taskId: string) => void;
   onUpdateTask: (taskId: string, startMinute: number, endMinute: number) => void;
   disabled: boolean;
   focusState: "idle" | "running" | "paused" | "break" | "completed";
@@ -74,8 +79,11 @@ export function TimelineBoard({
     return now.getHours() * 60 + now.getMinutes();
   });
   const currentOffset = minuteToOffset(currentMinute);
+  const boardRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const didAutoScrollRef = useRef(false);
+  const trashRef = useRef<HTMLDivElement | null>(null);
+  const [isOverTrash, setIsOverTrash] = useState(false);
 
   useEffect(() => {
     const update = () => {
@@ -101,11 +109,45 @@ export function TimelineBoard({
     scrollRef.current.scrollTo({ top: Math.max(currentOffset - 220, 0), behavior: "smooth" });
   }
 
+  function isPointerOverTrash(clientX: number, clientY: number) {
+    if (!trashRef.current) return false;
+    const rect = trashRef.current.getBoundingClientRect();
+    return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+  }
+
+  function endDrag(event: React.PointerEvent<HTMLDivElement>) {
+    if (!dragState) return;
+
+    if (!disabled && onRemoveTask && dragState.mode === "move" && isOverTrash) {
+      onRemoveTask(dragState.taskId);
+    }
+
+    setDragState(null);
+    setIsOverTrash(false);
+
+    try {
+      boardRef.current?.releasePointerCapture(event.pointerId);
+    } catch {
+      // ignore
+    }
+  }
+
   function commitDrag(event: React.PointerEvent<HTMLDivElement>) {
     if (!dragState || disabled) return;
     event.preventDefault();
 
-    const minuteDelta = snapMinute(offsetToMinute(event.clientY - dragState.originY) - START_HOUR * 60);
+    const nextIsOverTrash =
+      dragState.mode === "move" && Boolean(onRemoveTask) && isPointerOverTrash(event.clientX, event.clientY);
+    if (nextIsOverTrash !== isOverTrash) {
+      setIsOverTrash(nextIsOverTrash);
+    }
+
+    if (nextIsOverTrash && dragState.mode === "move") {
+      return;
+    }
+
+    const rawDeltaMinutes = ((event.clientY - dragState.originY) / HOUR_HEIGHT) * 60;
+    const minuteDelta = Math.round(rawDeltaMinutes / SNAP_MINUTES) * SNAP_MINUTES;
 
     if (dragState.mode === "move") {
       const duration = dragState.endMinute - dragState.startMinute;
@@ -127,8 +169,57 @@ export function TimelineBoard({
     onUpdateTask(dragState.taskId, dragState.startMinute, nextEnd);
   }
 
+  function getExternalDragPayload(event: React.DragEvent) {
+    const raw = event.dataTransfer.getData("application/x-daily-focus-inbox");
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as { title?: unknown; id?: unknown };
+        const title = typeof parsed.title === "string" ? parsed.title.trim() : "";
+        const inboxItemId = typeof parsed.id === "string" ? parsed.id : undefined;
+        if (title) return { title, inboxItemId };
+      } catch {
+        // ignore
+      }
+    }
+
+    const text = event.dataTransfer.getData("text/plain");
+    if (typeof text === "string" && text.trim()) return { title: text.trim() };
+    return null;
+  }
+
+  function onDropIntoBoard(event: React.DragEvent<HTMLDivElement>) {
+    if (disabled) return;
+    if (!onDropExternalTask) return;
+
+    const payload = getExternalDragPayload(event);
+    if (!payload) return;
+
+    event.preventDefault();
+
+    const container = event.currentTarget;
+    const rect = container.getBoundingClientRect();
+    const yInScroll = event.clientY - rect.top + container.scrollTop;
+    const snappedMinute = snapMinute(offsetToMinute(yInScroll));
+
+    const startMinute = clamp(snappedMinute, START_HOUR * 60, END_HOUR * 60 - 30);
+    const endMinute = clamp(startMinute + 30, START_HOUR * 60 + 15, MINUTES_IN_DAY);
+
+    onDropExternalTask({ title: payload.title, startMinute, endMinute, inboxItemId: payload.inboxItemId });
+  }
+
+  function canAcceptExternalDrop(event: React.DragEvent) {
+    const types = Array.from(event.dataTransfer.types ?? []);
+    return (
+      types.includes("application/x-daily-focus-inbox") ||
+      types.includes("text/plain") ||
+      types.includes("text") ||
+      types.includes("Text")
+    );
+  }
+
   return (
     <div
+      ref={boardRef}
       className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[24px]"
       style={{
         background:
@@ -137,10 +228,35 @@ export function TimelineBoard({
             : "var(--panel-soft)",
         border: "1px solid var(--line)",
       }}
+      onDragOverCapture={(event) => {
+        if (disabled) return;
+        if (!onDropExternalTask) return;
+        if (!canAcceptExternalDrop(event)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "copy";
+      }}
+      onDropCapture={onDropIntoBoard}
       onPointerMove={disabled ? undefined : commitDrag}
-      onPointerUp={() => setDragState(null)}
-      onPointerLeave={() => setDragState(null)}
+      onPointerUp={endDrag}
+      onPointerLeave={endDrag}
     >
+      {dragState?.mode === "move" && onRemoveTask ? (
+        <div
+          ref={trashRef}
+          className={cn(
+            "pointer-events-none absolute right-4 top-1/2 z-30 grid h-14 w-14 -translate-y-1/2 place-items-center rounded-[20px] transition",
+            isOverTrash ? "scale-[1.03]" : "scale-100",
+          )}
+          style={{
+            background: isOverTrash ? "rgba(239, 68, 68, 0.16)" : "var(--panel-strong)",
+            border: `1px dashed ${isOverTrash ? "rgba(239, 68, 68, 0.6)" : "var(--line)"}`,
+            boxShadow: isOverTrash ? "0 18px 48px rgba(239, 68, 68, 0.18)" : "none",
+          }}
+          aria-hidden
+        >
+          <Trash2 className="h-5 w-5" style={{ color: isOverTrash ? "rgb(239, 68, 68)" : "var(--muted)" }} />
+        </div>
+      ) : null}
       <div
         className="sticky top-0 z-20 flex items-center gap-3 px-6 py-4 backdrop-blur-md"
         style={{
@@ -165,6 +281,14 @@ export function TimelineBoard({
 
       <div
         className="soft-scrollbar relative min-h-0 flex-1 overflow-y-auto transition duration-300"
+        onDragOver={(event) => {
+          if (disabled) return;
+          if (!onDropExternalTask) return;
+          if (!canAcceptExternalDrop(event)) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "copy";
+        }}
+        onDrop={onDropIntoBoard}
         ref={scrollRef}
         style={{
           opacity: focusState === "running" ? 0.64 : focusState === "paused" ? 0.76 : focusState === "break" ? 0.82 : 1,
@@ -249,25 +373,53 @@ export function TimelineBoard({
             const categoryStyle = CATEGORY_STYLES[task.category];
 
             return (
-              <button
+              <div
                 key={task.id}
                 className={cn(
                   "group absolute left-24 right-6 overflow-hidden rounded-[20px] text-left transition duration-200",
                   isCompact ? "px-3 py-2.5" : "p-4",
                   dragState?.taskId === task.id && "scale-[1.01]",
-                  disabled && "cursor-default",
+                  "select-none",
+                  disabled ? "cursor-default" : "cursor-grab active:cursor-grabbing",
                 )}
                 onClick={() => onSelectTask(task.id)}
                 onDoubleClick={() => {
                   if (!disabled) onEditTask(task);
                 }}
+                onPointerDown={(event) => {
+                  if (disabled) return;
+                  if (event.button !== 0) return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onSelectTask(task.id);
+                  setDragState({
+                    taskId: task.id,
+                    mode: "move",
+                    originY: event.clientY,
+                    startMinute: task.startMinute,
+                    endMinute: task.endMinute,
+                  });
+                  try {
+                    boardRef.current?.setPointerCapture(event.pointerId);
+                  } catch {
+                    // ignore
+                  }
+                }}
                 onKeyDown={(event) => {
                   if (disabled) return;
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSelectTask(task.id);
+                    return;
+                  }
                   if (event.key.toLowerCase() === "e") {
                     event.preventDefault();
                     onEditTask(task);
                   }
                 }}
+                role="button"
+                tabIndex={disabled ? -1 : 0}
+                aria-disabled={disabled}
                 style={{
                   top,
                   height,
@@ -275,7 +427,6 @@ export function TimelineBoard({
                   border: `1px solid ${selectedTaskId === task.id ? "var(--line-strong)" : "var(--line)"}`,
                   boxShadow: dragState?.taskId === task.id ? "var(--shadow-panel)" : "none",
                 }}
-                type="button"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -309,32 +460,14 @@ export function TimelineBoard({
                         event.stopPropagation();
                         onEditTask(task);
                       }}
-                      style={{ background: "var(--bg-muted)", color: "var(--muted)" }}
-                      type="button"
-                    >
-                      <Pencil className={cn(isTiny ? "h-3.5 w-3.5" : "h-4 w-4")} />
-                    </button>
-
-                    <button
-                      aria-label="Move task"
-                      className={cn("cursor-grab rounded-full active:cursor-grabbing", isTiny ? "p-1.5" : "p-2")}
-                      disabled={disabled}
                       onPointerDown={(event) => {
-                        if (disabled) return;
+                        event.preventDefault();
                         event.stopPropagation();
-                        onSelectTask(task.id);
-                        setDragState({
-                          taskId: task.id,
-                          mode: "move",
-                          originY: event.clientY,
-                          startMinute: task.startMinute,
-                          endMinute: task.endMinute,
-                        });
                       }}
                       style={{ background: "var(--bg-muted)", color: "var(--muted)" }}
                       type="button"
                     >
-                      <GripVertical className={cn(isTiny ? "h-3.5 w-3.5" : "h-4 w-4")} />
+                      <Pencil className={cn(isTiny ? "h-3.5 w-3.5" : "h-4 w-4")} />
                     </button>
                   </div>
                 </div>
@@ -365,6 +498,7 @@ export function TimelineBoard({
                   onPointerDown={(event) => {
                     if (disabled) return;
                     event.stopPropagation();
+                    event.preventDefault();
                     onSelectTask(task.id);
                     setDragState({
                       taskId: task.id,
@@ -377,7 +511,7 @@ export function TimelineBoard({
                   style={{ background: "var(--line-strong)" }}
                   type="button"
                 />
-              </button>
+              </div>
             );
           })}
         </div>

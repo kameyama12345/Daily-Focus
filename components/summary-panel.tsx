@@ -1,12 +1,14 @@
 ﻿"use client";
 
-import { Sparkles } from "lucide-react";
+import { Clock3, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { formatDuration, formatMinute } from "@/lib/time";
 import { ThemeMode, ThemeToggle } from "@/components/theme-toggle";
-import { DashboardStats, PomodoroStatus } from "@/lib/types";
+import { DashboardStats, PomodoroStatus, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { InboxSection } from "@/components/inbox-section";
+import { InboxController } from "@/hooks/use-inbox";
 
 export function SummaryPanel({
   dashboard,
@@ -20,6 +22,11 @@ export function SummaryPanel({
   weekDates,
   selectedDate,
   onDateChange,
+  selectedTask,
+  onEditTask,
+  onToggleTaskCompletion,
+  onRemoveTask,
+  inbox,
 }: {
   dashboard: DashboardStats;
   theme: ThemeMode;
@@ -32,8 +39,14 @@ export function SummaryPanel({
   weekDates: string[];
   selectedDate: string;
   onDateChange: (dateKey: string) => void;
+  selectedTask: Task | null;
+  onEditTask: (task: Task) => void;
+  onToggleTaskCompletion: (taskId: string) => void;
+  onRemoveTask: (taskId: string) => void;
+  inbox: InboxController;
 }) {
   const today = new Date();
+  const isLocked = focusState === "running" || focusState === "paused" || focusState === "break";
   const parseDateKey = (dateKey: string) => {
     const [year, month, day] = dateKey.split("-").map(Number);
     return new Date(year, month - 1, day);
@@ -74,8 +87,92 @@ export function SummaryPanel({
             </div>
             <ThemeToggle onToggle={onToggleTheme} theme={theme} />
           </div>
+        </section>
 
-          <div className="mt-8 space-y-4">
+        <InboxSection inbox={inbox} />
+
+        <section className="surface rounded-[24px] p-6">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.24em] text-muted">Task Detail</div>
+              <h3 className="mt-2 text-xl font-semibold tracking-tight">
+                {selectedTask?.title ?? "選択中のタスクはありません"}
+              </h3>
+            </div>
+            {selectedTask ? (
+              <button
+                className="rounded-full px-3 py-2 text-sm transition"
+                disabled={isLocked}
+                onClick={() => onEditTask(selectedTask)}
+                style={{
+                  background: "var(--button-secondary)",
+                  color: "var(--button-secondary-text)",
+                  opacity: isLocked ? 0.65 : 1,
+                }}
+                type="button"
+              >
+                編集
+              </button>
+            ) : null}
+          </div>
+
+          {selectedTask ? (
+            <div className="mt-5 space-y-4">
+              <div className="flex items-center gap-2 text-sm text-muted">
+                <Clock3 className="h-4 w-4" />
+                {formatMinute(selectedTask.startMinute)} - {formatMinute(selectedTask.endMinute)}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span
+                  className="rounded-full px-2.5 py-1 text-[11px] font-medium"
+                  style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
+                >
+                  {selectedTask.category}
+                </span>
+                <span className="text-xs text-muted">Priority {selectedTask.priority}</span>
+              </div>
+
+              <p className="text-sm leading-6 text-muted">
+                {selectedTask.memo || "メモはまだありません。"}
+              </p>
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  className="flex-1 rounded-full px-4 py-3 text-sm font-medium transition"
+                  disabled={isLocked}
+                  onClick={() => onToggleTaskCompletion(selectedTask.id)}
+                  style={{
+                    background: "var(--button-primary)",
+                    color: "var(--button-primary-text)",
+                    opacity: isLocked ? 0.65 : 1,
+                  }}
+                  type="button"
+                >
+                  {selectedTask.completed ? "未完了に戻す" : "完了にする"}
+                </button>
+                <button
+                  className="rounded-full px-4 py-3 text-sm transition"
+                  disabled={isLocked}
+                  onClick={() => onRemoveTask(selectedTask.id)}
+                  style={{
+                    background: "var(--button-secondary)",
+                    color: "var(--danger)",
+                    opacity: isLocked ? 0.65 : 1,
+                  }}
+                  type="button"
+                >
+                  削除
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-4 text-sm leading-6 text-muted">タイムラインで予定を選ぶと詳細が表示されます。</p>
+          )}
+        </section>
+
+        <section className="surface rounded-[24px] p-6">
+          <div className="space-y-4">
             <div className="text-[11px] uppercase tracking-[0.24em] text-muted">State</div>
             <div className="flex items-end justify-between">
               <div>

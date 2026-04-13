@@ -51,10 +51,6 @@ export function RightRail({
   logs,
   pomodoro,
   dashboard,
-  selectedTask,
-  onEditTask,
-  onToggleTaskCompletion,
-  onRemoveTask,
   onPomodoroTaskChange,
   pomodoroPreferences,
   onPomodoroPreferencesChange,
@@ -69,10 +65,6 @@ export function RightRail({
   logs: WorkLog[];
   pomodoro: PomodoroState;
   dashboard: DashboardStats;
-  selectedTask: Task | null;
-  onEditTask: (task: Task) => void;
-  onToggleTaskCompletion: (taskId: string) => void;
-  onRemoveTask: (taskId: string) => void;
   onPomodoroTaskChange: (taskId: string | null) => void;
   pomodoroPreferences: {
     notificationsEnabled: boolean;
@@ -420,88 +412,6 @@ export function RightRail({
               </button>
             </div>
           </div>
-        </section>
-
-        <section
-          className="surface rounded-[24px] p-6 transition duration-300"
-          style={{
-            opacity: isFocusMode ? (focusState === "running" ? 0.48 : 0.66) : 1,
-            filter: isFocusMode ? "saturate(0.82)" : "none",
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-[11px] uppercase tracking-[0.24em] text-muted">Task Detail</div>
-              <h3 className="mt-2 text-xl font-semibold tracking-tight">
-                {selectedTask?.title ?? "選択中のタスクはありません"}
-              </h3>
-            </div>
-            {selectedTask ? (
-              <button
-                className="rounded-full px-3 py-2 text-sm transition"
-                disabled={isLocked}
-                onClick={() => onEditTask(selectedTask)}
-                style={{
-                  background: "var(--button-secondary)",
-                  color: "var(--button-secondary-text)",
-                }}
-                type="button"
-              >
-                編集
-              </button>
-            ) : null}
-          </div>
-
-          {selectedTask ? (
-            <div className="mt-5 space-y-4">
-              <div className="flex items-center gap-2 text-sm text-muted">
-                <Clock3 className="h-4 w-4" />
-                {formatMinute(selectedTask.startMinute)} - {formatMinute(selectedTask.endMinute)}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span
-                  className="rounded-full px-2.5 py-1 text-[11px] font-medium"
-                  style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
-                >
-                  {selectedTask.category}
-                </span>
-                <span className="text-xs text-muted">Priority {selectedTask.priority}</span>
-              </div>
-
-              <p className="text-sm leading-6 text-muted">
-                {selectedTask.memo || "メモはまだありません。"}
-              </p>
-
-              <div className="flex gap-2 pt-1">
-                <button
-                  className="flex-1 rounded-full px-4 py-3 text-sm font-medium transition"
-                  disabled={isLocked}
-                  onClick={() => onToggleTaskCompletion(selectedTask.id)}
-                  style={{
-                    background: "var(--button-primary)",
-                    color: "var(--button-primary-text)",
-                  }}
-                  type="button"
-                >
-                  {selectedTask.completed ? "未完了に戻す" : "完了にする"}
-                </button>
-                <button
-                  className="rounded-full px-4 py-3 text-sm transition"
-                  disabled={isLocked}
-                  onClick={() => onRemoveTask(selectedTask.id)}
-                  style={{ background: "var(--button-secondary)", color: "var(--danger)" }}
-                  type="button"
-                >
-                  削除
-                </button>
-              </div>
-            </div>
-          ) : (
-            <p className="mt-4 text-sm leading-6 text-muted">
-              詳細は常時出さず、必要なときだけここに展開します。
-            </p>
-          )}
         </section>
 
         <section
