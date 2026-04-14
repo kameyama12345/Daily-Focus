@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DAILY FOCUS | 編集画面</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="app-page">
+    <main class="app-shell app-shell--center">
+      <section class="editor-card" aria-labelledby="editor-title">
+        <header class="editor-card__header">
+          <div>
+            <p class="auth-card__eyebrow">TASK EDITOR</p>
+            <h1 id="editor-title" class="editor-card__title">タスクを編集</h1>
+          </div>
+          <a class="editor-card__close" href="./dashboard.html">閉じる</a>
+        </header>
+
+        <form class="editor-form">
+          <label class="field field--wide">
+            <span class="field__label">タイトル</span>
+            <input class="field__input" type="text" value="重要タスク" />
+          </label>
+
+          <div class="editor-grid">
+            <label class="field">
+              <span class="field__label">開始</span>
+              <input class="field__input" type="text" value="09:30" />
+            </label>
+            <label class="field">
+              <span class="field__label">終了</span>
+              <input class="field__input" type="text" value="11:00" />
+            </label>
+          </div>
+
+          <div class="editor-grid">
+            <label class="field">
+              <span class="field__label">カテゴリ</span>
+              <select class="field__input field__select">
+                <option selected>Deep Work</option>
+                <option>Routine</option>
+                <option>Meeting</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="field__label">優先度</span>
+              <select class="field__input field__select">
+                <option>Low</option>
+                <option selected>High</option>
+                <option>Critical</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="field field--wide">
+            <span class="field__label">メモ</span>
+            <textarea class="field__textarea" rows="5" placeholder="狙い・完了条件・メモなど"></textarea>
+          </label>
+
+          <div class="editor-footer">
+            <label class="checkline">
+              <input type="checkbox" />
+              <span>完了にする</span>
+            </label>
+            <div class="editor-footer__actions">
+              <button class="text-button text-button--danger" type="button">削除</button>
+              <a class="text-button" href="./dashboard.html">キャンセル</a>
+              <button class="button button--secondary" type="submit">保存</button>
+            </div>
+          </div>
+        </form>
+      </section>
+    </main>
+    <script src="./script.js"></script>
+  </body>
+</html>
