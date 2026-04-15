@@ -1,17 +1,47 @@
 # Daily Focus
 
-タイムラインを主役にした、1日の予定管理と集中実績の可視化アプリです。
+提出用に確認しやすいよう、制作ドキュメントとフロントエンド実装を整理しています。
 
-## Setup
+## 提出物の見方
+
+- 制作ドキュメント一式  
+  - `_制作ドキュメント/`
+- フロントエンド実装一式  
+  - `_フロントエンド実装/`
+
+## 制作ドキュメント
+
+- `01_企画提案書_DAILY_FOCUS.md`
+- `02_マーケットリサーチ_DAILY_FOCUS.md`
+- `03_ペルソナシート_DAILY_FOCUS.md`
+- `04_サイトマップ_DAILY_FOCUS.md`
+- `05_ワイヤーフレーム_DAILY_FOCUS.md`
+- `06_デザインガイドライン_DAILY_FOCUS.md`
+- `07_振り返り・技術記事_DAILY_FOCUS.md`
+
+## フロントエンド実装
+
+- 完成版アプリ  
+  - GitHub Pages: `https://kameyama12345.github.io/Daily-Focus/`
+- 提出用の静的フロント一式  
+  - `_フロントエンド実装/index.html`
+  - `_フロントエンド実装/login.html`
+  - `_フロントエンド実装/signup.html`
+  - `_フロントエンド実装/dashboard.html`
+  - `_フロントエンド実装/detail.html`
+  - `_フロントエンド実装/edit.html`
+
+## ローカル確認
 
 ```bash
 npm install
 npm run dev
 ```
 
-`http://localhost:3000` を開くと確認できます。
+- アプリ確認先: `http://localhost:3000`
+- GitHub Pages 公開先: `https://kameyama12345.github.io/Daily-Focus/`
 
-## Stack
+## 技術構成
 
 - Next.js
 - React
@@ -20,9 +50,9 @@ npm run dev
 - date-fns
 - lucide-react
 
-## Features
+## アプリ概要
 
-- 今日の縦型タイムライン
+- 今日の縦型タイムライン表示
 - タスクの追加・編集・削除
 - タスクブロックのドラッグ移動とリサイズ
 - 空き時間の可視化
