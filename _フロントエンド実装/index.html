@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DAILY FOCUS | フロントエンド実装</title>
+    <title>DAILY FOCUS | 提出用静的画面一覧</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -15,19 +15,50 @@
   <body class="deliverable-page">
     <main class="deliverable-shell">
       <section class="deliverable-card">
-        <p class="deliverable-eyebrow">FRONTEND IMPLEMENTATION</p>
-        <h1>DAILY FOCUS フロントエンド実装</h1>
+        <p class="deliverable-eyebrow">SUBMISSION SCREENS</p>
+        <h1>DAILY FOCUS 提出用静的画面一覧</h1>
         <p>
-          このフォルダには、提出用に整理した HTML/CSS/JavaScript の画面一式をまとめています。
-          完成版アプリの公開先もあわせて確認できます。
+          このフォルダは提出物として見せるために整理した静的画面の入口です。
+          下の一覧では、「提出用静的画面」と「完成版アプリ」の役割を分けて案内しています。
         </p>
+        <div class="deliverable-summary">
+          <article class="deliverable-summary__item">
+            <p class="deliverable-summary__label">提出物</p>
+            <p class="deliverable-summary__text">
+              このフォルダ内の HTML 画面は、画面構成と導線を確認するための提出用静的画面です。
+            </p>
+          </article>
+          <article class="deliverable-summary__item">
+            <p class="deliverable-summary__label">完成版</p>
+            <p class="deliverable-summary__text">
+              実際のアプリ実装は GitHub Pages で公開している Next.js 版を参照してください。
+            </p>
+          </article>
+          <article class="deliverable-summary__item">
+            <p class="deliverable-summary__label">試作との違い</p>
+            <p class="deliverable-summary__text">
+              この一覧にある画面が提出対象です。試作や補助フォルダは提出物の中心ではありません。
+            </p>
+          </article>
+        </div>
+        <div class="deliverable-section">
+          <p class="deliverable-section__title">完成版アプリ</p>
+          <div class="deliverable-actions">
+            <a class="button button--primary" href="https://kameyama12345.github.io/Daily-Focus/">完成版アプリを開く</a>
+          </div>
+        </div>
+        <div class="deliverable-section">
+          <p class="deliverable-section__title">提出用静的画面</p>
+          <div class="deliverable-actions">
+            <a class="button button--ghost" href="./login.html">ログイン画面を見る</a>
+            <a class="button button--ghost" href="./signup.html">会員登録画面を見る</a>
+            <a class="button button--ghost" href="./dashboard.html">一覧画面を見る</a>
+            <a class="button button--ghost" href="./detail.html">詳細画面を見る</a>
+            <a class="button button--ghost" href="./edit.html">編集画面を見る</a>
+          </div>
+        </div>
         <div class="deliverable-actions">
-          <a class="button button--primary" href="https://kameyama12345.github.io/Daily-Focus/">完成版アプリを開く</a>
-          <a class="button button--ghost" href="./login.html">ログイン画面を見る</a>
-          <a class="button button--ghost" href="./signup.html">会員登録画面を見る</a>
-          <a class="button button--ghost" href="./dashboard.html">一覧画面を見る</a>
-          <a class="button button--ghost" href="./detail.html">詳細画面を見る</a>
-          <a class="button button--ghost" href="./edit.html">編集画面を見る</a>
+          <a class="button button--ghost" href="../README.md">README で区分を見る</a>
         </div>
       </section>
     </main>
